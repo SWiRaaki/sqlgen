@@ -15,8 +15,9 @@ output: \(prefix).h
 
 /*
  * Every function returns an SQLite result code:
- *   SQLITE_ROW       a get found its row; a cursor stepped to its next row
- *   SQLITE_DONE      a get found no row; a cursor has no more rows; a write changed no row
+ *   SQLITE_ROW       a get or a one-row query found its row; a cursor stepped to its next row
+ *   SQLITE_DONE      a get or a one-row query found no row; a cursor has no more rows; a write
+ *                    changed no row
  *   SQLITE_OK        a write changed at least one row; anything else succeeded
  *   SQLITE_MISMATCH  a statement handed to a _read function does not select that table's columns
  *   SQLITE_RANGE     an id outside what both uint64_t and SQLite's int64 can hold
@@ -51,7 +52,7 @@ typedef struct {
 /* One connection's prepared statements. */
 typedef struct \(prefix)_ctx \(prefix)_ctx;
 
-/* The rows of a list; step with the table's _next, release with \(prefix)_cursor_close. */
+/* The rows of a list or a query; step with its row's _next, release with \(prefix)_cursor_close. */
 typedef struct {
 	sqlite3_stmt *stmt;
 	bool          owned;
@@ -123,6 +124,9 @@ int \(prefix)_migrate(sqlite3 *db, const char *applied_by, size_t *applied, char
 
 \for (t in tables) {
 #include "\(prefix)_\(t.words | snake).h"
+\}
+\for (q in queries) {
+#include "\(prefix)_\(q.words | snake).h"
 \}
 
 #endif

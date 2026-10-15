@@ -51,11 +51,11 @@ static const char \(kind)_\(a)\if (b != null) {_\(b)\}[] = {
 };
 \}
 \}
-\* Reading column i of the current row into out. *\
-\define read(c, i) {
+\* Reading column i of the current row into out, a row of the type named by the words row. *\
+\define read(c, i, row) {
 \if (c | storage == "value") {
 	if ((rc = \(prefix)__read_value(stmt, \(i), &out->\(c.words | cname))) != SQLITE_OK) {
-		\(prefix)_\(t.words | snake)_row_free(out);
+		\(prefix)_\(row | snake)_row_free(out);
 		return rc;
 	}
 \} \elif (c | storage == "text" or c | storage == "blob" or c | storage == "id") {
@@ -66,7 +66,7 @@ static const char \(kind)_\(a)\if (b != null) {_\(b)\}[] = {
 \} \else {
 	if ((rc = \(prefix)__read_\(c | storage)(stmt, \(i), &out->\(c.words | cname)\if (c | storage == "id") {.v\})) != SQLITE_OK) {
 \}
-		\(prefix)_\(t.words | snake)_row_free(out);
+		\(prefix)_\(row | snake)_row_free(out);
 		return rc;
 	}
 \} \elif (c.nullable) {
@@ -77,3 +77,9 @@ static const char \(kind)_\(a)\if (b != null) {_\(b)\}[] = {
 \}
 
 \}
+\* A query's function, without its body or semicolon. *\
+\define signature(q) {
+int \(prefix)_\(q.words | snake)(\(prefix)_ctx *ctx\for (p in q.params) {,
+		\call param(p, false)\}\if (q.rows == "many") {,
+		\(prefix)_cursor *out\} \elif (q.rows != "none") {,
+		\(prefix)_\(q.row_words | snake)_row *out\})\}

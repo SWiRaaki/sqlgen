@@ -2,6 +2,8 @@ api.h.gtpl
 defs.gtpl
 internal.h.gtpl
 migrate.c.gtpl
+query.c.gtpl
+query.h.gtpl
 runtime.c.gtpl
 scripts.c.gtpl
 table.c.gtpl

@@ -1,0 +1,2 @@
+../plan/queries/search_users.sql:2:1: error: search_users scans users in full; an index would let it seek, or -- @allow scan says it is meant [query_scan]
+sqlgen: 1 error

@@ -7,6 +7,7 @@
 #include "config.h"
 #include "model.h"
 #include "plan.h"
+#include "query.h"
 #include "rules.h"
 #include "schema.h"
 #include "generate.h"
@@ -178,6 +179,7 @@ static int run_schema(const options *opts, mode what) {
 	sg_patchset patches = {0};
 	sg_model    model   = {0};
 	sqlite3    *db      = NULL;
+	sg_queries  queries = {0};
 	int         status  = EXIT_INPUT;
 
 	if (first_run(opts)) {
@@ -196,6 +198,11 @@ static int run_schema(const options *opts, mode what) {
 
 	sg_schema_attach_origins(&patches, &model);
 
+	/* The model is the schema alone; everything else also checks the queries against it. */
+	if (what != MODE_MODEL && !sg_queries_load(db, &model, &config, &queries)) {
+		goto done;
+	}
+
 	if (what == MODE_MODEL) {
 		sg_buf json = {0};
 
@@ -203,7 +210,7 @@ static int run_schema(const options *opts, mode what) {
 		status = emit(opts, &json) ? 0 : EXIT_INPUT;
 		sg_buf_free(&json);
 	} else if (what == MODE_GENERATE) {
-		sg_rules_input      input   = { db, &model, &config, NULL, opts->strict };
+		sg_rules_input      input   = { db, &model, &config, NULL, opts->strict, &queries };
 		sg_rules_result     result;
 		sg_plan             plan    = {0};
 		sg_generate_options settings = { opts->config, opts->yes };
@@ -212,13 +219,13 @@ static int run_schema(const options *opts, mode what) {
 
 		if (result.errors) {
 			failed(&result);
-		} else if (sg_plan_build(&model, &patches, &config, &plan) && sg_generate(&config, &plan, &settings)) {
+		} else if (sg_plan_build(&model, &patches, &config, &queries, &plan) && sg_generate(&config, &plan, &settings)) {
 			status = 0;
 		}
 
 		sg_plan_free(&plan);
 	} else if (what == MODE_PLAN) {
-		sg_rules_input  input = { db, &model, &config, NULL, opts->strict };
+		sg_rules_input  input = { db, &model, &config, NULL, opts->strict, &queries };
 		sg_rules_result result;
 		sg_plan         plan  = {0};
 
@@ -226,7 +233,7 @@ static int run_schema(const options *opts, mode what) {
 
 		if (result.errors) {
 			failed(&result);
-		} else if (sg_plan_build(&model, &patches, &config, &plan)) {
+		} else if (sg_plan_build(&model, &patches, &config, &queries, &plan)) {
 			sg_buf json = {0};
 
 			sg_plan_write_json(&plan, &json);
@@ -236,7 +243,7 @@ static int run_schema(const options *opts, mode what) {
 
 		sg_plan_free(&plan);
 	} else {
-		sg_rules_input  input  = { db, &model, &config, NULL, opts->strict };
+		sg_rules_input  input  = { db, &model, &config, NULL, opts->strict, &queries };
 		sg_rules_result result;
 		size_t          tables = 0;
 		size_t          views  = 0;
@@ -250,8 +257,14 @@ static int run_schema(const options *opts, mode what) {
 				model.tables.items[i].kind == SG_VIEW ? ++views : ++tables;
 			}
 
-			printf("ok: %zu %s and %zu %s from %zu %s", tables, plural(tables, "table", "tables"), views,
-					plural(views, "view", "views"), count, plural(count, "patch", "patches"));
+			if (queries.count) {
+				printf("ok: %zu %s, %zu %s and %zu %s from %zu %s", tables, plural(tables, "table", "tables"),
+						views, plural(views, "view", "views"), queries.count,
+						plural(queries.count, "query", "queries"), count, plural(count, "patch", "patches"));
+			} else {
+				printf("ok: %zu %s and %zu %s from %zu %s", tables, plural(tables, "table", "tables"), views,
+						plural(views, "view", "views"), count, plural(count, "patch", "patches"));
+			}
 
 			if (result.warnings) {
 				printf("; %u %s", result.warnings, plural(result.warnings, "warning", "warnings"));
@@ -265,6 +278,7 @@ static int run_schema(const options *opts, mode what) {
 	}
 
 done:
+	sg_queries_free(&queries);
 	sg_model_free(&model);
 	sqlite3_close(db);
 	sg_patchset_free(&patches);
@@ -316,7 +330,7 @@ static int run_report(const options *opts) {
 	}
 
 	if (sg_introspect(db, &model)) {
-		sg_rules_input  input = { db, &model, &config, opts->database, opts->strict };
+		sg_rules_input  input = { db, &model, &config, opts->database, opts->strict, NULL };
 		sg_rules_result result;
 		sg_buf          json  = {0};
 

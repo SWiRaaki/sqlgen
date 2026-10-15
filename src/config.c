@@ -156,6 +156,7 @@ static const struct {
 	{ "updated_at_needs_created_at", SG_LEVEL_OFF,   { { "updated", "updated_at" }, { "created", "created_at" }, { NULL, NULL } } },
 	{ "stamp_type",                  SG_LEVEL_OFF,   { { "pattern", "*_at" }, { NULL, NULL } } },
 	{ "prefix_origin",               SG_LEVEL_OFF,   { { "prefix", NULL }, { NULL, NULL } } },
+	{ "query_scan",                  SG_LEVEL_WARN,  { { NULL, NULL } } },
 	{ NULL, SG_LEVEL_OFF, { { NULL, NULL } } }
 };
 
@@ -208,7 +209,8 @@ static const char DEFAULT_TEXT[] =
 	"\t\t\"created_at\": { \"level\": \"off\", \"column\": \"created_at\" },\n"
 	"\t\t\"updated_at_needs_created_at\": { \"level\": \"off\", \"updated\": \"updated_at\", \"created\": \"created_at\" },\n"
 	"\t\t\"stamp_type\": { \"level\": \"off\", \"pattern\": \"*_at\" },\n"
-	"\t\t\"prefix_origin\": { \"level\": \"off\", \"prefix\": null }\n"
+	"\t\t\"prefix_origin\": { \"level\": \"off\", \"prefix\": null },\n"
+	"\t\t\"query_scan\": \"warn\"\n"
 	"\t},\n"
 	"\t\"queries\": []\n"
 	"}\n";

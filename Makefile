@@ -14,7 +14,7 @@ BUILD    ?= release
 CIPHER   ?= 0
 SUFFIX   :=
 
-SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/rules.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/generate.c src/model_json.c src/main.c
+SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/generate.c src/model_json.c src/main.c
 HDR      := $(wildcard include/*.h)
 
 CSTD     := -std=c99
@@ -28,8 +28,9 @@ LIBS     := -lm
 #   COLUMN_METADATA  sqlite3_column_table_name / _origin_name: where a view column comes from
 #   THREADSAFE=0     sqlgen is single-threaded, so no mutexes and no -lpthread
 #   OMIT_LOAD_EXTENSION  nothing is loaded at run time
+#   EXPLAIN_COMMENTS describes each instruction's effect in explain; the query analysis reads it
 SQLITE_DEFS := -DSQLITE_ENABLE_COLUMN_METADATA -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION \
-               -DSQLITE_DEFAULT_MEMSTATUS=0
+               -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_ENABLE_EXPLAIN_COMMENTS
 
 # SQLCipher refuses THREADSAFE=0 at compile time, so the cipher build takes the mutexes and pthreads.
 ifeq ($(CIPHER),1)
@@ -58,7 +59,7 @@ all: $(OUT)/sqlgen
 $(OUT):
 	@mkdir -p $@
 
-$(SQLITE_O): vendor/sqlite3/sqlite3.c vendor/sqlite3/sqlite3.h | $(OUT)
+$(SQLITE_O): vendor/sqlite3/sqlite3.c vendor/sqlite3/sqlite3.h Makefile | $(OUT)
 	$(CC) $(OPT) $(SQLITE_DEFS) -w -c $< -o $@
 
 $(OUT)/%.o: src/%.c $(HDR) Makefile | $(OUT)
@@ -90,6 +91,16 @@ $(OUT)/json_test: test/json_test.c $(OUT)/json.o $(OUT)/util.o
 $(OUT)/template_test: test/template_test.c $(OUT)/template.o $(OUT)/value.o $(OUT)/util.o $(SQLITE_O)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@ $(LIBS)
 
+$(OUT)/bytecode_test: test/bytecode_test.c $(OUT)/bytecode.o $(OUT)/introspect.o $(OUT)/util.o $(SQLITE_O)
+	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@ $(LIBS)
+
+# The schema the bytecode analysis is tested against: the real-schema case, in patch order.
+BYTECODE_SCHEMA := test/cases/real-schema/sql/system.sql test/cases/real-schema/sql/0.1.0/users.sql \
+                   test/cases/real-schema/sql/0.1.0/sessions.sql test/cases/real-schema/sql/0.1.0/linked_accounts.sql \
+                   $(addprefix test/cases/real-schema/sql/0.2.0/,manga.sql manga_interest.sql source_manga.sql \
+                   person.sql scan_group.sql chapter.sql stats_history.sql tag_canonical.sql tag_source.sql \
+                   source_manga_author.sql source_manga_artist.sql source_manga_tag.sql reserved_accounts.sql)
+
 $(OUT)/config_test: test/config_test.c $(OUT)/config.o $(OUT)/json.o $(OUT)/util.o $(SQLITE_O)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@ $(LIBS)
 
@@ -103,10 +114,13 @@ GEN_C   := test/cases/generate-c/gen
 GEN_CC  := $(CC) $(CSTD) $(OPT) -Wall -Wextra -pedantic -Wconversion -Wsign-conversion -Wshadow \
            -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual -Werror -I$(GEN_C) $(CPPFLAGS)
 
-test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(OUT)/config_test $(OUT)/mkdb
+test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(OUT)/config_test $(OUT)/mkdb \
+		$(OUT)/bytecode_test
 	$(OUT)/semver_test
 	$(OUT)/json_test
 	$(OUT)/template_test
+	$(OUT)/bytecode_test $(BYTECODE_SCHEMA) > $(OUT)/bytecode.out
+	@diff -u test/bytecode.expected $(OUT)/bytecode.out && echo "bytecode: ok"
 	$(OUT)/config_test $(OUT)
 	bash test/run.sh $(OUT)/sqlgen $(OUT)/mkdb $(if $(filter 1,$(CIPHER)),cipher,plain)
 	$(GEN_CC) $(GEN_C)/*.c test/c/plan_test.c $(SQLITE_O) -o $(OUT)/plan_test $(LIBS)

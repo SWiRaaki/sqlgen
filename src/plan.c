@@ -560,32 +560,29 @@ static bool distinct_names(const sg_plan_table *t, const sg_config *config) {
 	return ok;
 }
 
-/* The logical type: the affinity, overridden by a by_name pattern, overridden by by_declared. */
-static void logical_type(const sg_config *config, const sg_column *column, sg_plan_column *out) {
+const char *sg_plan_logical_type(const sg_config *config, const sg_column *column, bool *custom) {
 	const char *type = sg_affinity_name(column->affinity);
 
-	out->custom = false;
+	*custom = false;
 
 	for (size_t i = 0; i < config->types_by_name.count; ++i) {
 		if (fnmatch(config->types_by_name.items[i].key, column->name, 0) == 0) {
-			type        = config->types_by_name.items[i].value;
-			out->custom = true;
+			type    = config->types_by_name.items[i].value;
+			*custom = true;
 		}
 	}
 
 	for (size_t i = 0; i < config->types_by_declared.count; ++i) {
 		if (sg_strcasecmp(config->types_by_declared.items[i].key, column->declared_type) == 0) {
-			type        = config->types_by_declared.items[i].value;
-			out->custom = true;
+			type    = config->types_by_declared.items[i].value;
+			*custom = true;
 		}
 	}
 
-	out->type = sg_xstrdup(type);
+	return type;
 }
 
-/* The table whose typed id a column holds: its own rowid alias, or the single-column foreign key
- * whose parent column is the parent's rowid alias. */
-static const char *id_of(const sg_model *model, const sg_table *table, const sg_column *column) {
+const char *sg_plan_id_of(const sg_model *model, const sg_table *table, const sg_column *column) {
 	if (column->rowid_alias) {
 		return table->name;
 	}
@@ -625,9 +622,9 @@ static bool plan_table(sg_plan *plan, const sg_model *model, const sg_table *tab
 		c->sql_name = sg_sql_identifier(column->name);
 		c->nullable = !column->notnull;
 		c->writable = table->kind == SG_TABLE && column->generated == SG_GEN_NONE && !column->hidden;
-		c->id_of    = config->typed_ids ? id_of(model, table, column) : NULL;
+		c->id_of    = config->typed_ids ? sg_plan_id_of(model, table, column) : NULL;
+		c->type     = sg_xstrdup(sg_plan_logical_type(config, column, &c->custom));
 		split_words(column->name, &c->words);
-		logical_type(config, column, c);
 
 		if (column->rowid_alias && c->id_of) {
 			t->id_column = (int)i;
@@ -719,39 +716,59 @@ static bool plan_scripts(sg_plan *plan, const sg_patchset *patches) {
 	return ok;
 }
 
+static void add_custom_type(sg_plan *plan, const char *type) {
+	for (size_t i = 0; i < plan->custom_types.count; ++i) {
+		if (strcmp(plan->custom_types.items[i], type) == 0) {
+			return;
+		}
+	}
+
+	size_t at = plan->custom_types.count;
+
+	*SG_PUSH(plan->custom_types) = sg_xstrdup(type);
+
+	while (at > 0 && strcmp(plan->custom_types.items[at - 1], plan->custom_types.items[at]) > 0) {
+		char *held = plan->custom_types.items[at - 1];
+
+		plan->custom_types.items[at - 1] = plan->custom_types.items[at];
+		plan->custom_types.items[at]     = held;
+		--at;
+	}
+}
+
 static void collect_custom_types(sg_plan *plan) {
 	for (size_t t = 0; t < plan->tables.count; ++t) {
 		for (size_t c = 0; c < plan->tables.items[t].columns.count; ++c) {
-			const sg_plan_column *column = &plan->tables.items[t].columns.items[c];
-			bool                  known  = false;
-
-			for (size_t i = 0; i < plan->custom_types.count && !known; ++i) {
-				known = strcmp(plan->custom_types.items[i], column->type) == 0;
+			if (plan->tables.items[t].columns.items[c].custom) {
+				add_custom_type(plan, plan->tables.items[t].columns.items[c].type);
 			}
+		}
+	}
 
-			if (column->custom && !known) {
-				size_t at = plan->custom_types.count;
+	for (size_t q = 0; plan->queries && q < plan->queries->count; ++q) {
+		const sg_query *query = &plan->queries->items[q];
 
-				*SG_PUSH(plan->custom_types) = sg_xstrdup(column->type);
+		for (size_t i = 0; i < query->params.count; ++i) {
+			if (query->params.items[i].custom) {
+				add_custom_type(plan, query->params.items[i].type);
+			}
+		}
 
-				while (at > 0 && strcmp(plan->custom_types.items[at - 1], plan->custom_types.items[at]) > 0) {
-					char *held = plan->custom_types.items[at - 1];
-
-					plan->custom_types.items[at - 1] = plan->custom_types.items[at];
-					plan->custom_types.items[at]     = held;
-					--at;
-				}
+		for (size_t i = 0; i < query->columns.count; ++i) {
+			if (query->columns.items[i].custom) {
+				add_custom_type(plan, query->columns.items[i].type);
 			}
 		}
 	}
 }
 
 bool sg_plan_build(const sg_model *model, const sg_patchset *patches, const sg_config *config,
-		sg_plan *out) {
+		const sg_queries *queries, sg_plan *out) {
 	bool ok = true;
 
 	memset(out, 0, sizeof *out);
-	out->config = config;
+	out->config  = config;
+	out->queries = queries;
 
 	for (size_t i = 0; i < model->tables.count; ++i) {
 		ok = plan_table(out, model, &model->tables.items[i]) && ok;
@@ -796,6 +813,43 @@ static void write_script(sg_jw *w, const char *key, const sg_plan_script *script
 
 static const char *kind_name(sg_table_kind kind) {
 	return kind == SG_VIEW ? "view" : (kind == SG_VIRTUAL ? "virtual" : "table");
+}
+
+/* The words naming a query's row type: the table's whose row it reuses, or its own. */
+static const sg_words *row_words(const sg_plan *plan, const sg_query *q) {
+	for (size_t t = 0; q->row_table && t < plan->tables.count; ++t) {
+		if (plan->tables.items[t].table == q->row_table) {
+			return &plan->tables.items[t].words;
+		}
+	}
+
+	return &q->words;
+}
+
+/* A query's parameters or columns, with the fields a table's columns have where they apply. */
+static void write_fields(sg_jw *w, const char *key, const sg_query_fields *fields) {
+	sg_jw_open(w, key, '[', false);
+
+	for (size_t i = 0; i < fields->count; ++i) {
+		const sg_query_field *f = &fields->items[i];
+
+		sg_jw_open(w, NULL, '{', true);
+		sg_jw_text(w, "name", f->name);
+		sg_jw_names(w, "words", &f->words);
+
+		if (f->index) {
+			sg_jw_int(w, "index", f->index);
+		}
+
+		sg_jw_text(w, "type", f->type);
+		sg_jw_bool(w, "custom", f->custom);
+		sg_jw_text(w, "affinity", sg_affinity_name(f->affinity));
+		sg_jw_bool(w, "nullable", f->nullable);
+		sg_jw_text(w, "id_of", f->id_of);
+		sg_jw_close(w, '}');
+	}
+
+	sg_jw_close(w, ']');
 }
 
 void sg_plan_write_json(const sg_plan *plan, sg_buf *out) {
@@ -879,6 +933,29 @@ void sg_plan_write_json(const sg_plan *plan, sg_buf *out) {
 		}
 
 		sg_jw_close(&w, ']');
+		sg_jw_close(&w, '}');
+	}
+
+	sg_jw_close(&w, ']');
+	sg_jw_open(&w, "queries", '[', false);
+
+	static const char *const rows[] = { "none", "one", "exactly_one", "many" };
+
+	for (size_t i = 0; plan->queries && i < plan->queries->count; ++i) {
+		const sg_query *q = &plan->queries->items[i];
+
+		sg_jw_open(&w, NULL, '{', false);
+		sg_jw_text(&w, "name", q->name);
+		sg_jw_names(&w, "words", &q->words);
+		sg_jw_text(&w, "path", q->path);
+		sg_jw_names(&w, "doc", &q->doc);
+		sg_jw_text(&w, "sql", q->sql);
+		sg_jw_bool(&w, "writes", q->writes);
+		sg_jw_text(&w, "rows", rows[q->rows]);
+		sg_jw_text(&w, "row_table", q->row_table ? q->row_table->name : NULL);
+		sg_jw_names(&w, "row_words", row_words(plan, q));
+		write_fields(&w, "params", &q->params);
+		write_fields(&w, "columns", &q->columns);
 		sg_jw_close(&w, '}');
 	}
 

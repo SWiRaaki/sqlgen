@@ -343,8 +343,121 @@ size_t sg_lang_c_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *co
 	return count;
 }
 
+typedef struct {
+	char       *name;    //!< After the prefix and its underscore.
+	const char *kind;    //!< What defines it, for the message: "table", "query" or "runtime".
+	const char *owner;   //!< Its name; NULL for the runtime.
+} c_name;
+
+typedef SG_VEC(c_name) c_names;
+
+static char *words_snake(const sg_words *words, const char *suffix) {
+	sg_buf out = {0};
+
+	for (size_t i = 0; i < words->count; ++i) {
+		sg_buf_puts(&out, i ? "_" : "");
+		sg_buf_puts(&out, words->items[i]);
+	}
+
+	sg_buf_puts(&out, suffix);
+	return out.data;
+}
+
+static void add_name(c_names *names, char *name, const char *kind, const char *owner) {
+	c_name *n = SG_PUSH(*names);
+
+	n->name  = name;
+	n->kind  = kind;
+	n->owner = owner;
+}
+
+/* Every name the tables and the runtime define after the prefix, file names included. */
+static void taken_names(const sg_plan *plan, c_names *out) {
+	static const char *const RUNTIME[] = {
+		"ctx", "ctx_open", "ctx_close", "ctx_db", "cursor", "cursor_close", "text", "text_free", "blob",
+		"blob_free", "value", "value_free", "script", "patch", "systables", "patches", "patch_count",
+		"schema_hash", "migrate", "internal", "scripts", NULL
+	};
+	static const char *const ROW[] = { "", "_row", "_row_free", "_read", "_next", NULL };
+
+	for (size_t i = 0; RUNTIME[i]; ++i) {
+		add_name(out, sg_xstrdup(RUNTIME[i]), "runtime", NULL);
+	}
+
+	for (size_t t = 0; t < plan->tables.count; ++t) {
+		const sg_plan_table *table = &plan->tables.items[t];
+
+		for (size_t i = 0; ROW[i]; ++i) {
+			add_name(out, words_snake(&table->words, ROW[i]), "table", table->table->name);
+		}
+
+		for (size_t i = 0; i < table->statements.count; ++i) {
+			char *suffix = words_snake(&table->statements.items[i].words, "");
+			char *name   = sg_format("_%s", suffix);
+
+			add_name(out, words_snake(&table->words, name), "table", table->table->name);
+			free(name);
+			free(suffix);
+		}
+
+		if (table->id_column >= 0) {
+			char *column = words_snake(&table->columns.items[table->id_column].words, "");
+			char *name   = sg_format("_%s", column);
+
+			add_name(out, words_snake(&table->words, name), "table", table->table->name);
+			free(name);
+			free(column);
+		}
+	}
+}
+
+/* A query's function, and its row type and helpers unless it reuses a table's, must be new names. */
+static bool distinct_queries(const sg_plan *plan, const sg_target *target) {
+	static const char *const ROW[] = { "_row", "_row_free", "_read", "_next", NULL };
+	c_names names = {0};
+	bool    ok    = true;
+
+	taken_names(plan, &names);
+
+	for (size_t q = 0; plan->queries && q < plan->queries->count; ++q) {
+		const sg_query *query = &plan->queries->items[q];
+		size_t          first = names.count;
+
+		add_name(&names, words_snake(&query->words, ""), "query", query->path);
+
+		for (size_t i = 0; !query->row_table && ROW[i]; ++i) {
+			add_name(&names, words_snake(&query->words, ROW[i]), "query", query->path);
+		}
+
+		/* The first clash says enough: the others follow from the same name. */
+		bool clash = false;
+
+		for (size_t mine = first; mine < names.count && !clash; ++mine) {
+			for (size_t other = 0; other < first && !clash; ++other) {
+				const c_name *taken = &names.items[other];
+
+				if (strcmp(names.items[mine].name, taken->name) == 0) {
+					sg_error(query->path, 0, 0, "the query would define %s_%s in C, which the %s%s%s already"
+							" defines; rename the file", target->prefix, names.items[mine].name, taken->kind,
+							taken->owner ? " " : "", taken->owner ? taken->owner : "");
+					clash = true;
+				}
+			}
+		}
+
+		ok = ok && !clash;
+	}
+
+	for (size_t i = 0; i < names.count; ++i) {
+		free(names.items[i].name);
+	}
+
+	free(names.items);
+	return ok;
+}
+
 bool sg_lang_c_check(const sg_config *config, const sg_target *target, size_t index, const sg_plan *plan) {
-	bool ok = true;
+	bool ok = distinct_queries(plan, target);
 
 	for (size_t i = 0; i < plan->custom_types.count; ++i) {
 		const char *logical = plan->custom_types.items[i];

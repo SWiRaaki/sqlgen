@@ -1,5 +1,6 @@
-/* Drives the C generated for test/cases/plan against a real database: every kind of statement,
- * the return codes, row ownership, cursors, typed ids, the embedded scripts and migration. */
+/* Drives the C generated for test/cases/plan, its query files included, against a real database:
+ * every kind of statement and query, the return codes, row ownership, cursors, typed ids, the
+ * embedded scripts and migration. */
 
 #include <stdio.h>
 #include <string.h>
@@ -91,6 +92,97 @@ static void migration(void) {
 
 static int text_is(const db_text *text, const char *expected) {
 	return text->ptr && text->len == strlen(expected) && strcmp(text->ptr, expected) == 0;
+}
+
+/* The query files: each kind of result, positional and named parameters, a reused row type. */
+static void queries(void) {
+	sqlite3 *db  = fresh();
+	db_ctx  *ctx = NULL;
+
+	CHECK(db_migrate(db, "plan_test", NULL, NULL) == SQLITE_OK);
+	CHECK(db_ctx_open(&ctx, db) == SQLITE_OK);
+
+	db_users_serial ada = DB_USERS_SERIAL(0);
+	db_users_serial bob = DB_USERS_SERIAL(0);
+	int64_t         now = 1000;
+
+	CHECK(db_users_insert(ctx, "ada", 3, "ada@x", 5, NULL, 0, "admin", 5, now, NULL, &ada) == SQLITE_OK);
+	CHECK(db_users_insert(ctx, "bob", 3, "bob@x", 5, "Bob", 3, "admin", 5, now, NULL, &bob) == SQLITE_OK);
+
+	/* Exactly one row, whatever the table holds. */
+	db_count_users_row count = {0};
+
+	CHECK(db_count_users(ctx, &count) == SQLITE_ROW && count.total == 2);
+	db_count_users_row_free(&count);
+
+	/* At most one row, by a positional parameter named after its column. */
+	db_user_by_name_row named = {0};
+
+	CHECK(db_user_by_name(ctx, "bob", 3, &named) == SQLITE_ROW);
+	CHECK(named.serial.v == bob.v && text_is(&named.email, "bob@x") && named.has_display_text);
+	CHECK(text_is(&named.display_text, "Bob"));
+	CHECK(db_user_by_name(ctx, "ada", 3, &named) == SQLITE_ROW && !named.has_display_text);
+	CHECK(db_user_by_name(ctx, "nobody", 6, &named) == SQLITE_DONE);
+	db_user_by_name_row_free(&named);
+
+	/* Writes: an insert with positional parameters, an update by changed rows. */
+	CHECK(db_add_session(ctx, ada, "f", 1, "h1", 2, now + 10, now) == SQLITE_OK);
+	CHECK(db_add_session(ctx, ada, "f", 1, "h2", 2, now + 20, now) == SQLITE_OK);
+	CHECK(db_add_session(ctx, bob, "f", 1, "h3", 2, now + 30, now) == SQLITE_OK);
+	CHECK(db_add_session(ctx, ada, "f", 1, "h1", 2, now, now) == SQLITE_CONSTRAINT);
+	CHECK(db_touch_session(ctx, now + 5, DB_SESSIONS_SERIAL(1)) == SQLITE_OK);
+	CHECK(db_touch_session(ctx, now, DB_SESSIONS_SERIAL(99)) == SQLITE_DONE);
+
+	/* Many rows of a row type of its own, joined. */
+	db_cursor              cursor = {0};
+	db_user_sessions_row   s      = {0};
+	int                    n      = 0;
+
+	CHECK(db_user_sessions(ctx, ada, now + 6, &cursor) == SQLITE_OK);
+
+	while (db_user_sessions_next(&cursor, &s) == SQLITE_ROW) {
+		CHECK(s.serial.v == 2 && s.expires_at == now + 20 && text_is(&s.username, "ada"));
+		++n;
+	}
+
+	CHECK(n == 1);
+	db_cursor_close(&cursor);
+	db_user_sessions_row_free(&s);
+
+	/* Many rows of the table's own row type. */
+	db_users_row u = {0};
+
+	n = 0;
+	CHECK(db_users_by_role(ctx, "admin", 5, &cursor) == SQLITE_OK);
+
+	while (db_users_next(&cursor, &u) == SQLITE_ROW) {
+		CHECK(text_is(&u.username, n == 0 ? "ada" : "bob"));
+		++n;
+	}
+
+	CHECK(n == 2);
+	db_cursor_close(&cursor);
+	db_users_row_free(&u);
+
+	/* Types from annotations. */
+	db_search_users_row found = {0};
+	db_tag_ranks_row    rank  = {0};
+	db_tag_id           tag   = DB_TAG_ID(0);
+
+	CHECK(db_search_users(ctx, "B", 1, &cursor) == SQLITE_OK);
+	CHECK(db_search_users_next(&cursor, &found) == SQLITE_ROW && found.serial.v == bob.v);
+	CHECK(db_search_users_next(&cursor, &found) == SQLITE_DONE);
+	db_cursor_close(&cursor);
+	db_search_users_row_free(&found);
+
+	CHECK(db_tag_insert(ctx, NULL, "news", 4, NULL, &tag) == SQLITE_OK);
+	CHECK(db_tag_ranks(ctx, &cursor) == SQLITE_OK);
+	CHECK(db_tag_ranks_next(&cursor, &rank) == SQLITE_ROW && text_is(&rank.slug, "news") && rank.position == 1);
+	db_cursor_close(&cursor);
+	db_tag_ranks_row_free(&rank);
+
+	db_ctx_close(ctx);
+	sqlite3_close(db);
 }
 
 int main(void) {
@@ -264,6 +356,7 @@ int main(void) {
 
 	db_ctx_close(ctx);
 	sqlite3_close(db);
+	queries();
 	printf("plan_test: %s\n", failures ? "FAILED" : "ok");
 	return failures ? 1 : 0;
 }

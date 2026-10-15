@@ -34,7 +34,7 @@ int \(prefix)_\(t.words | snake)_read(sqlite3_stmt *stmt, \(prefix)_\(t.words | 
 	\(prefix)_\(t.words | snake)_row_free(out);
 
 \for (c in t.columns) {
-\call read(c, loop.index)
+\call read(c, loop.index, t.words)
 \}
 	return SQLITE_OK;
 }

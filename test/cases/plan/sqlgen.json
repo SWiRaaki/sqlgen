@@ -2,6 +2,7 @@
 	"schema": { "systables": "sys.sql", "patches": "sql/*/" },
 	"types": { "by_name": { "*_at": "timestamp_ms" }, "by_declared": {} },
 	"targets": [{ "language": "c", "dir": "gen", "prefix": "db", "types": { "timestamp_ms": "int64_t" } }],
+	"queries": ["queries/*.sql"],
 	"tables": {
 		"*": { "writes": ["insert", "update", "delete", "upsert"] },
 		"user_tag": { "writes": ["link", "delete"] },

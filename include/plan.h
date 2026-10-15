@@ -29,6 +29,7 @@
 
 #include "config.h"
 #include "model.h"
+#include "query.h"
 #include "schema.h"
 
 typedef sg_names sg_words;
@@ -100,6 +101,7 @@ typedef struct {
 	SG_VEC(sg_plan_patch)     patches;      //!< In precedence order.
 	char                      hash[17];     //!< FNV-1a 64 of every script's name and text, in order, as hex.
 	sg_words                  custom_types; //!< Every logical type from `types` some column uses, sorted.
+	const sg_queries         *queries;      //!< The query files; borrowed.
 } sg_plan;
 
 /**
@@ -109,7 +111,20 @@ typedef struct {
  *         statements of one table that would get the same name.
  */
 bool sg_plan_build(const sg_model *model, const sg_patchset *patches, const sg_config *config,
-		sg_plan *out);
+		const sg_queries *queries, sg_plan *out);
+
+/**
+ * @brief A column's logical type: its affinity's name, overridden by a matching `types.by_name`
+ *        pattern, overridden by a matching `types.by_declared` entry.
+ * @param custom Receives whether the type came from `types`.
+ */
+const char *sg_plan_logical_type(const sg_config *config, const sg_column *column, bool *custom);
+
+/**
+ * @brief The table whose typed id a column holds: its own table when it is the rowid alias, the
+ *        parent when it is a one-column foreign key to the parent's rowid alias; NULL otherwise.
+ */
+const char *sg_plan_id_of(const sg_model *model, const sg_table *table, const sg_column *column);
 
 /** @brief Write the plan as JSON. */
 void sg_plan_write_json(const sg_plan *plan, sg_buf *out);

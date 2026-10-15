@@ -1,0 +1,154 @@
+
+select c.serial, c.title, g.name as group_name, cast(c.number as real) as number from chapter c left join scan_group g on g.serial = c.scan_group where c.source_manga = :series and c.language = :lang order by number
+  rows: many
+  column serial int! <chapter.serial>
+  column title text? <chapter.title>
+  column group_name text? <scan_group.name>
+  column number real?
+  param :series int|real! <chapter.source_manga>
+  param :lang text! <chapter.language>
+
+select language, count(*) as n, max(page_count) as most, sum(page_count) as total, avg(page_count) as mean, 1 + page_count as next, 'x' || title as label, length(title) as len, coalesce(volume, 'none') as vol, page_count / :d as ratio, page_count > 3 as big from chapter where source_manga = :s group by language
+  rows: many
+  column language text! <chapter.language>
+  column n int!
+  column most int?
+  column total int|real?
+  column mean real?
+  column next int|real!
+  column label text?
+  column len int?
+  column vol text!
+  column ratio int|real?
+  column big int?
+  param :d int|real!
+  param :s int|real! <chapter.source_manga>
+
+select sm.serial, sm.upstream_id from source_manga sm join manga_interest mi on mi.manga = sm.manga where sm.source = :source and coalesce(mi.updated_at, mi.created_at) >= :since and not exists (select 1 from stats_history sh where sh.source_manga = sm.serial and sh.created_at > :sampled) order by coalesce(mi.updated_at, mi.created_at) desc
+  rows: many
+  column serial int! <source_manga.serial>
+  column upstream_id text! <source_manga.upstream_id>
+  param :source text! <source_manga.source>
+  param :since int!
+  param :sampled int|real! <stats_history.created_at>
+
+select serial, title from chapter where source_manga = :s and upstream_id = :u
+  rows: at most one
+  column serial int! <chapter.serial>
+  column title text? <chapter.title>
+  param :s int|real! <chapter.source_manga>
+  param :u text! <chapter.upstream_id>
+
+select * from users where serial = :id
+  rows: at most one
+  column serial int! <users.serial>
+  column username text! <users.username>
+  column email text! <users.email>
+  column display_text text! <users.display_text>
+  column password text! <users.password>
+  column deactivated_at int? <users.deactivated_at>
+  column created_at int! <users.created_at>
+  column updated_at int? <users.updated_at>
+  param :id int! <users.serial>
+
+select serial from chapter where title = ? order by serial limit 1
+  rows: at most one
+  column serial int! <chapter.serial>
+  param ? text! <chapter.title>
+
+select count(*) as n from chapter where source_manga = :s
+  rows: exactly one
+  column n int!
+  param :s int|real! <chapter.source_manga>
+
+select upper(:x) as shout
+  rows: exactly one
+  column shout text?
+  param :x text!
+
+select title from chapter where page_count >= :min
+  rows: many
+  column title text? <chapter.title>
+  param :min int! <chapter.page_count>
+
+insert into sessions (user, family, token_hash, expires_at, created_at) values (:user, :family, :hash, :expires, :now)
+  rows: none
+  param :user int! <sessions.user>
+  param :family text! <sessions.family>
+  param :hash text! <sessions.token_hash>
+  param :expires int! <sessions.expires_at>
+  param :now int! <sessions.created_at>
+
+update sessions set updated_at = :now where token_hash = :hash
+  rows: none
+  param :now int! <sessions.updated_at>
+  param :hash text! <sessions.token_hash>
+
+delete from sessions where expires_at <= :now
+  rows: none
+  param :now int! <sessions.expires_at>
+
+insert into chapter (source_manga, upstream_id, number, volume, title, language, scan_group, page_count, external_url, published_at, created_at) values (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11) returning serial
+  rows: many
+  column serial int!
+  param ?1 int! <chapter.source_manga>
+  param ?2 text! <chapter.upstream_id>
+  param ?3 text! <chapter.number>
+  param ?4 text! <chapter.volume>
+  param ?5 text! <chapter.title>
+  param ?6 text! <chapter.language>
+  param ?7 int! <chapter.scan_group>
+  param ?8 int! <chapter.page_count>
+  param ?9 text! <chapter.external_url>
+  param ?10 int! <chapter.published_at>
+  param ?11 int! <chapter.created_at>
+
+select distinct language from chapter where source_manga = :s
+  rows: many
+  column language text! <chapter.language>
+  param :s int|real! <chapter.source_manga>
+
+select m.slug, (select count(*) from source_manga sm where sm.manga = m.serial) as copies from manga m
+  rows: many
+  column slug text! <manga.slug>
+  column copies int!
+
+select case when page_count > 10 then 'long' else 'short' end as size, case when volume is null then 1 end as missing, iif(page_count > 1, title, null) as titled, nullif(language, 'en') as other, title like :pattern as hit from chapter
+  rows: many
+  column size text!
+  column missing int?
+  column titled text?
+  column other text?
+  column hit int?
+  param :pattern text!
+
+select exists (select 1 from chapter where source_manga = :s) as has, json_extract(:doc, '$.a') as a
+  rows: exactly one
+  column has int?
+  column a text?
+  param :s int|real! <chapter.source_manga>
+  param :doc text!
+
+select title from chapter where scan_group in (select serial from scan_group where name = :group)
+  rows: many
+  column title text? <chapter.title>
+  param :group text! <scan_group.name>
+
+select username as name from users union all select display_text from users
+  rows: many
+  column name text!
+
+with recent as (select serial, title from chapter where published_at > :since) select title from recent
+  rows: many
+  column title text? <chapter.title>
+  param :since int! <chapter.published_at>
+
+select iif(page_count > 1, language, null) as maybe, case when page_count > 1 then language end as also from chapter
+  rows: many
+  column maybe text?
+  column also text?
+
+select title, row_number() over (order by serial) as n from chapter
+  rows: many
+  column title UNKNOWN?
+  column n UNKNOWN!

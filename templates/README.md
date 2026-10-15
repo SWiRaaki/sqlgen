@@ -196,8 +196,9 @@ The plan:
 |---|---|
 | `hash` | a hash of every script; it changes whenever the schema does |
 | `embed_scripts`, `typed_ids` | the `generate` settings |
-| `custom_types` | the logical types from `types` that columns use |
+| `custom_types` | the logical types from `types` that columns and queries use |
 | `tables` | every table and view |
+| `queries` | every query file, by file name |
 | `scripts.systables` | the system tables script (`name`, `path`, `text`), or `null` |
 | `scripts.patches` | each patch: `version`, `major`, `minor`, `patch`, `prerelease`, `build`, `scripts` |
 
@@ -236,6 +237,24 @@ A statement:
 | `params` | in placeholder order: `column`, `index` (into `columns`), `optional` |
 | `key` | the columns it selects by |
 | `returning` | the key columns an insert returns, for WITHOUT ROWID tables |
+
+A query:
+
+| Name | Value |
+|---|---|
+| `name`, `words` | from the file name: `user_sessions.sql` is `user_sessions` |
+| `path` | the file |
+| `doc` | its leading `--` comment lines that are no annotation, as a list of lines |
+| `sql` | the statement as written, without its `;` |
+| `writes` | true when it changes the database |
+| `rows` | `none`, `one` (at most), `exactly_one` or `many` |
+| `row_table` | the table whose columns it selects exactly, so its row type is that table's; or `null` |
+| `row_words` | the words naming its row type: that table's, or its own |
+| `params` | each parameter: `index`, its 1-based placeholder number, and the fields of a column |
+| `columns` | each result column, with the fields of a column |
+
+A parameter or result column has `name`, `words`, `type`, `custom`, `affinity`, `nullable` and
+`id_of`, meaning what they mean for a column.
 
 ## Filters
 

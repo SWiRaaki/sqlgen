@@ -1,0 +1,4 @@
+{
+	"schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" },
+	"queries": ["q/*.sql", "r/*.sql", "none/*.sql"]
+}

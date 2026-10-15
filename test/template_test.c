@@ -230,6 +230,16 @@ int main(void) {
 
 		renders_set("define bodies keep their own text", set, 1, "{ \"xs\": [1, 2] }", "out.txt", "a b\n\t<1>\n\t<2>\n");
 	}
+	{
+		/* A body ending mid-line: its closing line holds only tags outside the body, so the line
+		 * break after it is no output. */
+		source set[] = {
+			{ "t.gtpl", "<<<\noutput: out.txt\n>>>\n\\define sig(x) {\nint f(\\(x),\n\tint b)\\}\n"
+				"[\\call sig(1)];\n" }
+		};
+
+		renders_set("a define ending mid-line", set, 1, "{}", "out.txt", "[int f(1,\n\tint b)];\n");
+	}
 
 	/* Headers: remapping, and one file per item. */
 	renders("literal forms through strings", "\\(\"\\\\(x)\") \\(\"\\\\}\")\n", "{}", "\\(x) \\}\n");

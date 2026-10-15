@@ -327,6 +327,29 @@ static void unknown_tables(const sg_rules_input *in, sg_rules_result *out) {
 	}
 }
 
+/* A full table scan in a query, as `explain query plan` reports it. */
+static void query_scan(run *r, const sg_queries *queries) {
+	for (size_t i = 0; queries && i < queries->count; ++i) {
+		const sg_query *q = &queries->items[i];
+
+		for (size_t s = 0; !q->allow_scan && s < q->scans.count; ++s) {
+			char    message[512];
+			bool    error = r->rule->level == SG_LEVEL_ERROR || r->in->strict;
+
+			snprintf(message, sizeof message, "%s scans %s in full; an index would let it seek, or"
+					" -- @allow scan says it is meant [query_scan]", q->name, q->scans.items[s]);
+
+			if (error) {
+				sg_error(q->path, q->line, q->col, "%s", message);
+				++r->out->errors;
+			} else {
+				sg_warning(q->path, q->line, q->col, "%s", message);
+				++r->out->warnings;
+			}
+		}
+	}
+}
+
 void sg_rules_run(const sg_rules_input *in, sg_rules_result *out) {
 	run r = { in, out, NULL };
 
@@ -348,6 +371,12 @@ void sg_rules_run(const sg_rules_input *in, sg_rules_result *out) {
 
 			RULES[i].check(&r, table);
 		}
+	}
+
+	r.rule = sg_config_rule(in->config, "query_scan");
+
+	if (r.rule && r.rule->level != SG_LEVEL_OFF) {
+		query_scan(&r, in->queries);
 	}
 
 	unknown_tables(in, out);

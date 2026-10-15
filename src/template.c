@@ -862,7 +862,7 @@ static bool has_newline(const char *s, size_t len) {
 /*
  * A line holding only tags and whitespace produces nothing: its whitespace is dropped. What a
  * \define on the line holds is not output there, so it does not count as the line's content; its
- * own text is kept, except a line break that only ends the line the \define stands on.
+ * own text is kept, except a line break that only ends the line the \define starts or ends on.
  */
 static void drop_tag_lines(const char *src, tokens *list) {
 	size_t first = 0;
@@ -881,6 +881,12 @@ static void drop_tag_lines(const char *src, tokens *list) {
 		int    level   = first < list->count ? list->items[first].depth : 0;
 		bool   control = false;
 		bool   content = false;
+
+		/* The line belongs to the outermost body it touches, so the line a \define ends on is
+		 * judged by what follows the body, like the line it starts on by what precedes it. */
+		for (size_t i = first; i < end; ++i) {
+			level = list->items[i].depth < level ? list->items[i].depth : level;
+		}
 
 		for (size_t i = first; i < end; ++i) {
 			const token *tok = &list->items[i];

@@ -551,6 +551,155 @@
 			"statements": []
 		}
 	],
+	"queries": [
+		{
+			"name": "add_session",
+			"words": ["add", "session"],
+			"path": "queries/add_session.sql",
+			"doc": [],
+			"sql": "insert into sessions (user, family, token_hash, expires_at, created_at) values (?, ?, ?, ?, ?)",
+			"writes": true,
+			"rows": "none",
+			"row_table": null,
+			"row_words": ["add", "session"],
+			"params": [
+				{"name": "user", "words": ["user"], "index": 1, "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "users"},
+				{"name": "family", "words": ["family"], "index": 2, "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "token_hash", "words": ["token", "hash"], "index": 3, "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "expires_at", "words": ["expires", "at"], "index": 4, "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "id_of": null},
+				{"name": "created_at", "words": ["created", "at"], "index": 5, "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "id_of": null}
+			],
+			"columns": []
+		},
+		{
+			"name": "count_users",
+			"words": ["count", "users"],
+			"path": "queries/count_users.sql",
+			"doc": [],
+			"sql": "select count(*) as total from users",
+			"writes": false,
+			"rows": "exactly_one",
+			"row_table": null,
+			"row_words": ["count", "users"],
+			"params": [],
+			"columns": [
+				{"name": "total", "words": ["total"], "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": null}
+			]
+		},
+		{
+			"name": "search_users",
+			"words": ["search", "users"],
+			"path": "queries/search_users.sql",
+			"doc": [],
+			"sql": "select serial, username from users where display_text like :pattern || '%'",
+			"writes": false,
+			"rows": "many",
+			"row_table": null,
+			"row_words": ["search", "users"],
+			"params": [
+				{"name": "pattern", "words": ["pattern"], "index": 1, "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null}
+			],
+			"columns": [
+				{"name": "serial", "words": ["serial"], "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "users"},
+				{"name": "username", "words": ["username"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null}
+			]
+		},
+		{
+			"name": "tag_ranks",
+			"words": ["tag", "ranks"],
+			"path": "queries/tag_ranks.sql",
+			"doc": [],
+			"sql": "select slug, rank() over (order by \"order\") as position from tag",
+			"writes": false,
+			"rows": "many",
+			"row_table": null,
+			"row_words": ["tag", "ranks"],
+			"params": [],
+			"columns": [
+				{"name": "slug", "words": ["slug"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "position", "words": ["position"], "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": null}
+			]
+		},
+		{
+			"name": "touch_session",
+			"words": ["touch", "session"],
+			"path": "queries/touch_session.sql",
+			"doc": [],
+			"sql": "update sessions set expires_at = :expires_at where serial = :serial",
+			"writes": true,
+			"rows": "none",
+			"row_table": null,
+			"row_words": ["touch", "session"],
+			"params": [
+				{"name": "expires_at", "words": ["expires", "at"], "index": 1, "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "id_of": null},
+				{"name": "serial", "words": ["serial"], "index": 2, "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "sessions"}
+			],
+			"columns": []
+		},
+		{
+			"name": "user_by_name",
+			"words": ["user", "by", "name"],
+			"path": "queries/user_by_name.sql",
+			"doc": [],
+			"sql": "select serial, email, display_text from users where username = ?",
+			"writes": false,
+			"rows": "one",
+			"row_table": null,
+			"row_words": ["user", "by", "name"],
+			"params": [
+				{"name": "username", "words": ["username"], "index": 1, "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null}
+			],
+			"columns": [
+				{"name": "serial", "words": ["serial"], "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "users"},
+				{"name": "email", "words": ["email"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "display_text", "words": ["display", "text"], "type": "text", "custom": false, "affinity": "text", "nullable": true, "id_of": null}
+			]
+		},
+		{
+			"name": "user_sessions",
+			"words": ["user", "sessions"],
+			"path": "queries/user_sessions.sql",
+			"doc": [],
+			"sql": "select s.serial, s.family, s.expires_at, u.username\nfrom sessions s join users u on u.serial = s.user\nwhere s.user = :user and s.expires_at > :now",
+			"writes": false,
+			"rows": "many",
+			"row_table": null,
+			"row_words": ["user", "sessions"],
+			"params": [
+				{"name": "user", "words": ["user"], "index": 1, "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "users"},
+				{"name": "now", "words": ["now"], "index": 2, "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "id_of": null}
+			],
+			"columns": [
+				{"name": "serial", "words": ["serial"], "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "sessions"},
+				{"name": "family", "words": ["family"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "expires_at", "words": ["expires", "at"], "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "id_of": null},
+				{"name": "username", "words": ["username"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null}
+			]
+		},
+		{
+			"name": "users_by_role",
+			"words": ["users", "by", "role"],
+			"path": "queries/users_by_role.sql",
+			"doc": ["Every user with a role, alphabetically."],
+			"sql": "select * from users where role = :role order by username",
+			"writes": false,
+			"rows": "many",
+			"row_table": "users",
+			"row_words": ["users"],
+			"params": [
+				{"name": "role", "words": ["role"], "index": 1, "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null}
+			],
+			"columns": [
+				{"name": "serial", "words": ["serial"], "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "id_of": "users"},
+				{"name": "username", "words": ["username"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "email", "words": ["email"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "display_text", "words": ["display", "text"], "type": "text", "custom": false, "affinity": "text", "nullable": true, "id_of": null},
+				{"name": "role", "words": ["role"], "type": "text", "custom": false, "affinity": "text", "nullable": false, "id_of": null},
+				{"name": "created_at", "words": ["created", "at"], "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "id_of": null},
+				{"name": "updated_at", "words": ["updated", "at"], "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": true, "id_of": null}
+			]
+		}
+	],
 	"scripts": {
 		"systables": {
 			"name": "sys.sql",

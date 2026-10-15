@@ -17,6 +17,9 @@ enum {
 	\(prefix | upper)_STMT_\(t.words | upper)_\(s.words | upper),
 \}
 \}
+\for (q in queries) {
+	\(prefix | upper)_QUERY_\(q.words | upper),
+\}
 	\(prefix | upper)_STATEMENT_COUNT
 };
 

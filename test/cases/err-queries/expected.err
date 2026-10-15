@@ -1,0 +1,15 @@
+sqlgen.json: error: $.queries: 'none/*.sql' matches nothing
+q/__.sql: error: the file name gives the query no name
+q/a_window.sql:1: error: the type of the result column slug cannot be told from the statement; add a line -- @column slug <type> [null]
+q/a_window.sql:1: error: the type of the result column position cannot be told from the statement; add a line -- @column position <type> [null]
+q/b_two.sql:1:15: error: a second statement; a query file holds exactly one
+q/c_syntax.sql:3:6: error: near "username": syntax error
+q/d_positional.sql:1: error: parameter 1 has no name, and no single column it is compared with or stored into names it; write it as :name
+q/e_dup_param.sql:1: error: two parameters are called username; name the positional one
+q/f_annotations.sql:1:4: error: not an annotation sqlgen knows; known: @param name type [null], @column name type [null], @returns one|many, @allow scan
+q/f_annotations.sql:3:4: error: @column total takes a type -- integer, real, text, blob or numeric -- and then optionally null
+q/f_annotations.sql:2: error: @param nope names no parameter of the statement
+q/f_annotations.sql:4: error: @column other names no result column
+q/g_dup_column.sql:1: error: two result columns are called serial; give one an alias (as …)
+q/h_empty.sql: error: holds no statement
+r/same.sql: error: is a second query named same, after q/same.sql

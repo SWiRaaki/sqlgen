@@ -1,0 +1,6 @@
+{
+	"schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" },
+	"types": { "by_name": { "*_at": "timestamp_ms" }, "by_declared": {} },
+	"targets": [{ "language": "c", "dir": "gen", "prefix": "db", "types": { "timestamp_ms": "int64_t" } }],
+	"queries": ["q/*.sql"]
+}

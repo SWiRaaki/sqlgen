@@ -1,0 +1,3 @@
+q/ctx_open.sql: error: the query would define db_ctx_open in C, which the runtime already defines; rename the file
+q/users.sql: error: the query would define db_users in C, which the table users already defines; rename the file
+q/users_read.sql: error: the query would define db_users_read in C, which the table users already defines; rename the file

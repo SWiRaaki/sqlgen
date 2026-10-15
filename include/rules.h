@@ -20,6 +20,9 @@
  * `pk_naming` and `created_at`, since its pair is its identity. `prefix_origin` needs to know which
  * script created a table, so it does not apply to a live database.
  *
+ * `query_scan` looks at the query files: each full table scan `explain query plan` reports for one,
+ * unless the file says `-- @allow scan`, is reported at the start of its statement.
+ *
  * Independently of the rules, a `tables` entry naming no table in the schema is always an error:
  * it is a misspelling, and the options it sets would otherwise silently apply to nothing.
  */
@@ -28,6 +31,7 @@
 
 #include "config.h"
 #include "model.h"
+#include "query.h"
 
 typedef struct {
 	sqlite3         *db;       //!< The database the model was read from; `fk_target` asks it.
@@ -35,6 +39,7 @@ typedef struct {
 	const sg_config *config;
 	const char      *source;   //!< Where findings without a script are reported; NULL for none.
 	bool             strict;   //!< Report warnings as errors.
+	const sg_queries *queries; //!< The query files, for `query_scan`; NULL for none.
 } sg_rules_input;
 
 typedef struct {
