@@ -44,6 +44,12 @@ void sg_warning(const char *file, unsigned line, unsigned col, const char *fmt, 
  */
 unsigned sg_error_count(void);
 
+/**
+ * @brief Send every error and warning to @p sink, one formatted line each (no line break), instead
+ *        of standard error; NULL restores standard error.
+ */
+void sg_set_error_sink(void (*sink)(const char *line, void *user), void *user);
+
 /** @brief malloc that never returns NULL; a zero size still yields a unique pointer. */
 void *sg_xmalloc(size_t size);
 
@@ -140,6 +146,15 @@ char *sg_dirname(const char *path);
  * @brief Translate a byte offset into a 1-based line and byte column.
  */
 void sg_line_col(const char *text, size_t offset, unsigned *line, unsigned *col);
+
+/**
+ * @brief Split a name into lowercase words, calling @p emit with each, in order. A word ends where
+ *        anything but an ASCII letter or digit stands, and where a lowercase letter or digit is
+ *        followed by an uppercase one -- so `token_hash`, `tokenHash` and `Token Hash` all give
+ *        `token`, `hash`. The word passed to @p emit is lowercase and NUL-terminated, and only
+ *        valid during the call.
+ */
+void sg_split_words(const char *name, void (*emit)(const char *word, void *user), void *user);
 
 /** @brief Case-insensitive ASCII comparison, as SQLite compares identifiers. */
 int sg_strcasecmp(const char *a, const char *b);

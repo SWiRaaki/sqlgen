@@ -1,0 +1,3 @@
+"$SQLGEN" templates c tpl > /dev/null
+sed -i "s/-- do not edit/-- customised here, still do not edit/" tpl/defs.gtpl
+rm -rf gen

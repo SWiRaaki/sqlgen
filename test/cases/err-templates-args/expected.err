@@ -1,0 +1,1 @@
+sqlgen: error: templates needs a language and a directory: sqlgen templates c my-templates

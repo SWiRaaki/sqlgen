@@ -1,0 +1,4 @@
+sqlgen.json: error: $.targets[0].types maps no C type for the logical type handle
+sqlgen.json: error: $.targets[0].types maps no C type for the logical type timestamp_ms
+sqlgen.json: error: users.username has the logical type handle, but a C type for a logical type is read and bound as an integer or a double, and the column is text
+sqlgen.json: error: v_names.username has the logical type handle, but a C type for a logical type is read and bound as an integer or a double, and the column is text

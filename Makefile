@@ -14,7 +14,7 @@ BUILD    ?= release
 CIPHER   ?= 0
 SUFFIX   :=
 
-SRC      := src/util.c src/semver.c src/json.c src/config.c src/schema.c src/introspect.c src/rules.c src/model_json.c src/main.c
+SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/rules.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/generate.c src/model_json.c src/main.c
 HDR      := $(wildcard include/*.h)
 
 CSTD     := -std=c99
@@ -64,10 +64,22 @@ $(SQLITE_O): vendor/sqlite3/sqlite3.c vendor/sqlite3/sqlite3.h | $(OUT)
 $(OUT)/%.o: src/%.c $(HDR) Makefile | $(OUT)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) -c $< -o $@
 
-$(OUT)/sqlgen: $(OBJ) $(SQLITE_O)
+# The built-in templates: each file under templates/<language>/ is compiled in as a byte array.
+TEMPLATES_C := $(sort $(wildcard templates/c/*.gtpl))
+
+$(OUT)/embed: tools/embed.c | $(OUT)
+	$(CC) $(CSTD) $(OPT) $(WARN) $< -o $@
+
+$(OUT)/builtin_c.c: $(OUT)/embed $(TEMPLATES_C) templates/c
+	$(OUT)/embed $@ c $(TEMPLATES_C)
+
+$(OUT)/builtin_c.o: $(OUT)/builtin_c.c $(HDR)
+	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) -c $< -o $@
+
+$(OUT)/sqlgen: $(OBJ) $(OUT)/builtin_c.o $(SQLITE_O)
 	$(CC) $(OPT) $^ -o $@ $(LIBS)
 
-# Test helpers: unit tests for the version rules, strict JSON and the configuration, and a tool that builds a database file from a
+# Test helpers: unit tests for the version rules, strict JSON, templates and the configuration, and a tool that builds a database file from a
 # script so `report` has something real to read.
 $(OUT)/semver_test: test/semver_test.c $(OUT)/semver.o $(OUT)/util.o
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@
@@ -75,17 +87,33 @@ $(OUT)/semver_test: test/semver_test.c $(OUT)/semver.o $(OUT)/util.o
 $(OUT)/json_test: test/json_test.c $(OUT)/json.o $(OUT)/util.o
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@
 
+$(OUT)/template_test: test/template_test.c $(OUT)/template.o $(OUT)/value.o $(OUT)/util.o $(SQLITE_O)
+	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@ $(LIBS)
+
 $(OUT)/config_test: test/config_test.c $(OUT)/config.o $(OUT)/json.o $(OUT)/util.o $(SQLITE_O)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@ $(LIBS)
 
 $(OUT)/mkdb: test/mkdb.c $(SQLITE_O)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) $^ -o $@ $(LIBS)
 
-test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/config_test $(OUT)/mkdb
+# The C that test/cases/generate-c generates, compiled as strictly as anyone might, then driven
+# against a real database by test/c/plan_test.c. test/c/wrong_id.c must not compile: typed ids of
+# different tables do not mix.
+GEN_C   := test/cases/generate-c/gen
+GEN_CC  := $(CC) $(CSTD) $(OPT) -Wall -Wextra -pedantic -Wconversion -Wsign-conversion -Wshadow \
+           -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual -Werror -I$(GEN_C) $(CPPFLAGS)
+
+test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(OUT)/config_test $(OUT)/mkdb
 	$(OUT)/semver_test
 	$(OUT)/json_test
+	$(OUT)/template_test
 	$(OUT)/config_test $(OUT)
 	bash test/run.sh $(OUT)/sqlgen $(OUT)/mkdb $(if $(filter 1,$(CIPHER)),cipher,plain)
+	$(GEN_CC) $(GEN_C)/*.c test/c/plan_test.c $(SQLITE_O) -o $(OUT)/plan_test $(LIBS)
+	$(OUT)/plan_test
+	@if $(GEN_CC) -c test/c/wrong_id.c -o /dev/null 2>/dev/null; then \
+		echo "wrong_id: an id of one table was accepted for another"; exit 1; \
+	else echo "wrong_id: refused, as it must be"; fi
 
 asan:
 	$(MAKE) BUILD=asan test

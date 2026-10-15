@@ -1,0 +1,4 @@
+{
+	"schema": { "systables": "../rules/sys.sql", "patches": [] },
+	"tables": { "*": { "writes": false }, "SYS_META": { "writes": true }, "sys_metta": { "writes": true } }
+}

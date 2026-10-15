@@ -1,0 +1,15 @@
+{
+	"schema": { "systables": "sys.sql", "patches": "sql/*/" },
+	"rules": {
+		"fk_target": "warn",
+		"fk_indexed": "warn",
+		"nullable_unique": "warn",
+		"strict": "warn",
+		"pk_shape": "warn",
+		"pk_naming": "warn",
+		"created_at": "warn",
+		"updated_at_needs_created_at": "warn",
+		"stamp_type": "warn",
+		"prefix_origin": { "level": "warn", "prefix": "sys_" }
+	}
+}

@@ -70,7 +70,7 @@ static bool plain_identifier(const char *name) {
 	return true;
 }
 
-static bool needs_quote(const char *name) {
+bool sg_needs_quote(const char *name) {
 	return !plain_identifier(name) || sqlite3_keyword_check(name, (int)strlen(name)) != 0;
 }
 
@@ -113,7 +113,7 @@ static bool read_columns(sqlite3 *db, sg_table *table) {
 		column->pk               = sqlite3_column_int(stmt, 4);
 		column->generated        = hidden == 2 ? SG_GEN_VIRTUAL : (hidden == 3 ? SG_GEN_STORED : SG_GEN_NONE);
 		column->hidden           = hidden == 1;
-		column->needs_quote      = needs_quote(column->name);
+		column->needs_quote      = sg_needs_quote(column->name);
 
 		if (!column->declared_type) {
 			column->declared_type = sg_xstrdup("");
@@ -657,4 +657,8 @@ void sg_model_free(sg_model *model) {
 	free(model->tables.items);
 	free(model->sqlite_version);
 	memset(model, 0, sizeof *model);
+}
+
+char *sg_sql_identifier(const char *name) {
+	return sg_needs_quote(name) ? quote_identifier(name) : sg_xstrdup(name);
 }

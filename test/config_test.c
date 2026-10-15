@@ -45,8 +45,19 @@ static void defaults_agree(void) {
 			&& same(written.patch_patterns.items[0], empty.patch_patterns.items[0]), "patches differ");
 	expect(written.double_quoted_strings == empty.double_quoted_strings, "double_quoted_strings differs");
 	expect(written.foreign_keys == empty.foreign_keys, "foreign_keys differs");
-	expect(same(written.output_dir, empty.output_dir), "output.dir differs");
-	expect(same(written.prefix, empty.prefix), "output.prefix differs");
+	expect(written.targets.count == 1 && empty.targets.count == 1, "the default target differs");
+
+	if (written.targets.count == 1 && empty.targets.count == 1) {
+		const sg_target *w = &written.targets.items[0];
+		const sg_target *e = &empty.targets.items[0];
+
+		expect(same(w->language, e->language) && same(w->dir, e->dir) && same(w->prefix, e->prefix)
+				&& same(w->templates, e->templates) && w->confirm_clear == e->confirm_clear
+				&& w->types.count == e->types.count, "a key of the default target differs");
+		expect(same(e->language, "c") && strstr(e->dir, "gen") && same(e->prefix, "db") && !e->templates
+				&& e->confirm_clear && e->types.count == 0, "the default target changed");
+	}
+
 	expect(written.embed_scripts == empty.embed_scripts, "embed_scripts differs");
 	expect(written.typed_ids == empty.typed_ids, "typed_ids differs");
 	expect(written.types_by_name.count == 0 && empty.types_by_name.count == 0, "types.by_name not empty");
@@ -78,8 +89,7 @@ static void defaults_agree(void) {
 	expect(empty.patch_patterns.count == 1 && strstr(empty.patch_patterns.items[0], "sql/*/") != NULL,
 			"patches is not sql/*/");
 	expect(!empty.double_quoted_strings && empty.foreign_keys, "schema flags changed");
-	expect(strstr(empty.output_dir, "gen") != NULL && same(empty.prefix, "db"), "output defaults changed");
-	expect(empty.embed_scripts && empty.typed_ids, "output flags changed");
+	expect(empty.embed_scripts && empty.typed_ids, "generate flags changed");
 	expect(sg_config_rule(&empty, "fk_target")->level == SG_LEVEL_ERROR
 			&& sg_config_rule(&empty, "fk_indexed")->level == SG_LEVEL_WARN
 			&& sg_config_rule(&empty, "nullable_unique")->level == SG_LEVEL_WARN

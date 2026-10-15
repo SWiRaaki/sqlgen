@@ -1,0 +1,2 @@
+# Every generated file, so a change to the templates shows as a diff here.
+for f in gen/*; do echo "=== $f"; cat "$f"; done

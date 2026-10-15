@@ -5,12 +5,20 @@
 		"double_quoted_strings": false,
 		"foreign_keys": true
 	},
-	"output": {
-		"dir": "gen",
-		"prefix": "db",
+	"generate": {
 		"embed_scripts": true,
 		"typed_ids": true
 	},
+	"targets": [
+		{
+			"language": "c",
+			"dir": "gen",
+			"prefix": "db",
+			"templates": null,
+			"confirm_clear": true,
+			"types": {}
+		}
+	],
 	"types": {
 		"by_declared": {},
 		"by_name": {}

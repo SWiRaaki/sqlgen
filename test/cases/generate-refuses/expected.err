@@ -1,0 +1,1 @@
+gen: error: is not empty (1 entry), and there is no terminal to ask; pass --yes or set confirm_clear to false

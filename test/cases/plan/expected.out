@@ -1,0 +1,562 @@
+{
+	"format": 1,
+	"hash": "9f9e610a4572aa1a",
+	"embed_scripts": true,
+	"typed_ids": true,
+	"custom_types": ["timestamp_ms"],
+	"tables": [
+		{
+			"name": "doubled",
+			"words": ["doubled"],
+			"kind": "table",
+			"without_rowid": false,
+			"junction": false,
+			"sql_name": "doubled",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 32, "patch": "1.0.0"},
+			"id_column": "id",
+			"select_list": "id, w, twice",
+			"columns": [
+				{"name": "id", "words": ["id"], "sql_name": "id", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": true, "id_of": "doubled"},
+				{"name": "w", "words": ["w"], "sql_name": "w", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "twice", "words": ["twice"], "sql_name": "twice", "type": "integer", "custom": false, "affinity": "integer", "nullable": true, "writable": false, "rowid": false, "id_of": null}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select id, w, twice from doubled where id = ?1",
+					"params": [{"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "insert",
+					"words": ["insert"],
+					"sql": "insert into doubled (id, w) values (?1, ?2)",
+					"params": [{"column": "id", "index": 0, "optional": true}, {"column": "w", "index": 1, "optional": false}],
+					"key": [],
+					"returning": []
+				},
+				{
+					"kind": "update",
+					"words": ["update", "by", "key"],
+					"sql": "update doubled set w = ?1 where id = ?2",
+					"params": [{"column": "w", "index": 1, "optional": false}, {"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "key"],
+					"sql": "delete from doubled where id = ?1",
+					"params": [{"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "key"],
+					"sql": "insert into doubled (id, w) values (?1, ?2) on conflict (id) do update set w = excluded.w",
+					"params": [{"column": "id", "index": 0, "optional": true}, {"column": "w", "index": 1, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "sessions",
+			"words": ["sessions"],
+			"kind": "table",
+			"without_rowid": false,
+			"junction": false,
+			"sql_name": "sessions",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 11, "patch": "1.0.0"},
+			"id_column": "serial",
+			"select_list": "serial, user, family, token_hash, expires_at, created_at",
+			"columns": [
+				{"name": "serial", "words": ["serial"], "sql_name": "serial", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": true, "id_of": "sessions"},
+				{"name": "user", "words": ["user"], "sql_name": "user", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": "users"},
+				{"name": "family", "words": ["family"], "sql_name": "family", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "token_hash", "words": ["token", "hash"], "sql_name": "token_hash", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "expires_at", "words": ["expires", "at"], "sql_name": "expires_at", "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "created_at", "words": ["created", "at"], "sql_name": "created_at", "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": null}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select serial, user, family, token_hash, expires_at, created_at from sessions where serial = ?1",
+					"params": [{"column": "serial", "index": 0, "optional": false}],
+					"key": ["serial"],
+					"returning": []
+				},
+				{
+					"kind": "get",
+					"words": ["get", "by", "token", "hash"],
+					"sql": "select serial, user, family, token_hash, expires_at, created_at from sessions where token_hash = ?1",
+					"params": [{"column": "token_hash", "index": 3, "optional": false}],
+					"key": ["token_hash"],
+					"returning": []
+				},
+				{
+					"kind": "list",
+					"words": ["list", "by", "user"],
+					"sql": "select serial, user, family, token_hash, expires_at, created_at from sessions where user = ?1 order by serial",
+					"params": [{"column": "user", "index": 1, "optional": false}],
+					"key": ["user"],
+					"returning": []
+				},
+				{
+					"kind": "list",
+					"words": ["list", "by", "user", "and", "family"],
+					"sql": "select serial, user, family, token_hash, expires_at, created_at from sessions where user = ?1 and family = ?2 order by serial",
+					"params": [{"column": "user", "index": 1, "optional": false}, {"column": "family", "index": 2, "optional": false}],
+					"key": ["user", "family"],
+					"returning": []
+				},
+				{
+					"kind": "insert",
+					"words": ["insert"],
+					"sql": "insert into sessions (user, family, token_hash, expires_at, created_at) values (?1, ?2, ?3, ?4, ?5)",
+					"params": [{"column": "user", "index": 1, "optional": false}, {"column": "family", "index": 2, "optional": false}, {"column": "token_hash", "index": 3, "optional": false}, {"column": "expires_at", "index": 4, "optional": false}, {"column": "created_at", "index": 5, "optional": false}],
+					"key": [],
+					"returning": []
+				},
+				{
+					"kind": "update",
+					"words": ["update", "by", "key"],
+					"sql": "update sessions set user = ?1, family = ?2, token_hash = ?3, expires_at = ?4, created_at = ?5 where serial = ?6",
+					"params": [{"column": "user", "index": 1, "optional": false}, {"column": "family", "index": 2, "optional": false}, {"column": "token_hash", "index": 3, "optional": false}, {"column": "expires_at", "index": 4, "optional": false}, {"column": "created_at", "index": 5, "optional": false}, {"column": "serial", "index": 0, "optional": false}],
+					"key": ["serial"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "key"],
+					"sql": "delete from sessions where serial = ?1",
+					"params": [{"column": "serial", "index": 0, "optional": false}],
+					"key": ["serial"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "token", "hash"],
+					"sql": "delete from sessions where token_hash = ?1",
+					"params": [{"column": "token_hash", "index": 3, "optional": false}],
+					"key": ["token_hash"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "user"],
+					"sql": "delete from sessions where user = ?1",
+					"params": [{"column": "user", "index": 1, "optional": false}],
+					"key": ["user"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "user", "and", "family"],
+					"sql": "delete from sessions where user = ?1 and family = ?2",
+					"params": [{"column": "user", "index": 1, "optional": false}, {"column": "family", "index": 2, "optional": false}],
+					"key": ["user", "family"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "token", "hash"],
+					"sql": "insert into sessions (user, family, token_hash, expires_at, created_at) values (?1, ?2, ?3, ?4, ?5) on conflict (token_hash) do update set user = excluded.user, family = excluded.family, expires_at = excluded.expires_at, created_at = excluded.created_at",
+					"params": [{"column": "user", "index": 1, "optional": false}, {"column": "family", "index": 2, "optional": false}, {"column": "token_hash", "index": 3, "optional": false}, {"column": "expires_at", "index": 4, "optional": false}, {"column": "created_at", "index": 5, "optional": false}],
+					"key": ["token_hash"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "setting",
+			"words": ["setting"],
+			"kind": "table",
+			"without_rowid": true,
+			"junction": false,
+			"sql_name": "setting",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 30, "patch": "1.0.0"},
+			"id_column": null,
+			"select_list": "name, value",
+			"columns": [
+				{"name": "name", "words": ["name"], "sql_name": "name", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "value", "words": ["value"], "sql_name": "value", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select name, value from setting where name = ?1",
+					"params": [{"column": "name", "index": 0, "optional": false}],
+					"key": ["name"],
+					"returning": []
+				},
+				{
+					"kind": "insert",
+					"words": ["insert"],
+					"sql": "insert into setting (name, value) values (?1, ?2) returning name",
+					"params": [{"column": "name", "index": 0, "optional": false}, {"column": "value", "index": 1, "optional": false}],
+					"key": [],
+					"returning": ["name"]
+				},
+				{
+					"kind": "update",
+					"words": ["update", "by", "key"],
+					"sql": "update setting set value = ?1 where name = ?2",
+					"params": [{"column": "value", "index": 1, "optional": false}, {"column": "name", "index": 0, "optional": false}],
+					"key": ["name"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "key"],
+					"sql": "delete from setting where name = ?1",
+					"params": [{"column": "name", "index": 0, "optional": false}],
+					"key": ["name"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "key"],
+					"sql": "insert into setting (name, value) values (?1, ?2) on conflict (name) do update set value = excluded.value",
+					"params": [{"column": "name", "index": 0, "optional": false}, {"column": "value", "index": 1, "optional": false}],
+					"key": ["name"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "sys_state",
+			"words": ["sys", "state"],
+			"kind": "table",
+			"without_rowid": false,
+			"junction": false,
+			"sql_name": "sys_state",
+			"origin": {"script": "sys.sql", "line": 1, "patch": null},
+			"id_column": "id",
+			"select_list": "id, created_at",
+			"columns": [
+				{"name": "id", "words": ["id"], "sql_name": "id", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": true, "id_of": "sys_state"},
+				{"name": "created_at", "words": ["created", "at"], "sql_name": "created_at", "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": null}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select id, created_at from sys_state where id = ?1",
+					"params": [{"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "tag",
+			"words": ["tag"],
+			"kind": "table",
+			"without_rowid": false,
+			"junction": false,
+			"sql_name": "tag",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 21, "patch": "1.0.0"},
+			"id_column": "id",
+			"select_list": "id, slug, \"order\"",
+			"columns": [
+				{"name": "id", "words": ["id"], "sql_name": "id", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": true, "id_of": "tag"},
+				{"name": "slug", "words": ["slug"], "sql_name": "slug", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "order", "words": ["order"], "sql_name": "\"order\"", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": null}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select id, slug, \"order\" from tag where id = ?1",
+					"params": [{"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "get",
+					"words": ["get", "by", "slug"],
+					"sql": "select id, slug, \"order\" from tag where slug = ?1",
+					"params": [{"column": "slug", "index": 1, "optional": false}],
+					"key": ["slug"],
+					"returning": []
+				},
+				{
+					"kind": "insert",
+					"words": ["insert"],
+					"sql": "insert into tag (id, slug, \"order\") values (?1, ?2, coalesce(?3, (0)))",
+					"params": [{"column": "id", "index": 0, "optional": true}, {"column": "slug", "index": 1, "optional": false}, {"column": "order", "index": 2, "optional": true}],
+					"key": [],
+					"returning": []
+				},
+				{
+					"kind": "update",
+					"words": ["update", "by", "key"],
+					"sql": "update tag set slug = ?1, \"order\" = ?2 where id = ?3",
+					"params": [{"column": "slug", "index": 1, "optional": false}, {"column": "order", "index": 2, "optional": false}, {"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "key"],
+					"sql": "delete from tag where id = ?1",
+					"params": [{"column": "id", "index": 0, "optional": false}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "slug"],
+					"sql": "delete from tag where slug = ?1",
+					"params": [{"column": "slug", "index": 1, "optional": false}],
+					"key": ["slug"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "key"],
+					"sql": "insert into tag (id, slug, \"order\") values (?1, ?2, coalesce(?3, (0))) on conflict (id) do update set slug = excluded.slug, \"order\" = excluded.\"order\"",
+					"params": [{"column": "id", "index": 0, "optional": true}, {"column": "slug", "index": 1, "optional": false}, {"column": "order", "index": 2, "optional": true}],
+					"key": ["id"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "slug"],
+					"sql": "insert into tag (id, slug, \"order\") values (?1, ?2, coalesce(?3, (0))) on conflict (slug) do update set \"order\" = excluded.\"order\"",
+					"params": [{"column": "id", "index": 0, "optional": true}, {"column": "slug", "index": 1, "optional": false}, {"column": "order", "index": 2, "optional": true}],
+					"key": ["slug"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "user_tag",
+			"words": ["user", "tag"],
+			"kind": "table",
+			"without_rowid": true,
+			"junction": true,
+			"sql_name": "user_tag",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 23, "patch": "1.0.0"},
+			"id_column": null,
+			"select_list": "user, tag",
+			"columns": [
+				{"name": "user", "words": ["user"], "sql_name": "user", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": "users"},
+				{"name": "tag", "words": ["tag"], "sql_name": "tag", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": "tag"}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select user, tag from user_tag where user = ?1 and tag = ?2",
+					"params": [{"column": "user", "index": 0, "optional": false}, {"column": "tag", "index": 1, "optional": false}],
+					"key": ["user", "tag"],
+					"returning": []
+				},
+				{
+					"kind": "list",
+					"words": ["list", "by", "tag"],
+					"sql": "select user, tag from user_tag where tag = ?1 order by user, tag",
+					"params": [{"column": "tag", "index": 1, "optional": false}],
+					"key": ["tag"],
+					"returning": []
+				},
+				{
+					"kind": "list",
+					"words": ["list", "by", "user"],
+					"sql": "select user, tag from user_tag where user = ?1 order by user, tag",
+					"params": [{"column": "user", "index": 0, "optional": false}],
+					"key": ["user"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "key"],
+					"sql": "delete from user_tag where user = ?1 and tag = ?2",
+					"params": [{"column": "user", "index": 0, "optional": false}, {"column": "tag", "index": 1, "optional": false}],
+					"key": ["user", "tag"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "tag"],
+					"sql": "delete from user_tag where tag = ?1",
+					"params": [{"column": "tag", "index": 1, "optional": false}],
+					"key": ["tag"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "user"],
+					"sql": "delete from user_tag where user = ?1",
+					"params": [{"column": "user", "index": 0, "optional": false}],
+					"key": ["user"],
+					"returning": []
+				},
+				{
+					"kind": "link",
+					"words": ["link"],
+					"sql": "insert or ignore into user_tag (user, tag) values (?1, ?2)",
+					"params": [{"column": "user", "index": 0, "optional": false}, {"column": "tag", "index": 1, "optional": false}],
+					"key": ["user", "tag"],
+					"returning": []
+				},
+				{
+					"kind": "unlink",
+					"words": ["unlink"],
+					"sql": "delete from user_tag where user = ?1 and tag = ?2",
+					"params": [{"column": "user", "index": 0, "optional": false}, {"column": "tag", "index": 1, "optional": false}],
+					"key": ["user", "tag"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "users",
+			"words": ["users"],
+			"kind": "table",
+			"without_rowid": false,
+			"junction": false,
+			"sql_name": "users",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 1, "patch": "1.0.0"},
+			"id_column": "serial",
+			"select_list": "serial, username, email, display_text, role, created_at, updated_at",
+			"columns": [
+				{"name": "serial", "words": ["serial"], "sql_name": "serial", "type": "integer", "custom": false, "affinity": "integer", "nullable": false, "writable": true, "rowid": true, "id_of": "users"},
+				{"name": "username", "words": ["username"], "sql_name": "username", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "email", "words": ["email"], "sql_name": "email", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "display_text", "words": ["display", "text"], "sql_name": "display_text", "type": "text", "custom": false, "affinity": "text", "nullable": true, "writable": true, "rowid": false, "id_of": null},
+				{"name": "role", "words": ["role"], "sql_name": "role", "type": "text", "custom": false, "affinity": "text", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "created_at", "words": ["created", "at"], "sql_name": "created_at", "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": false, "writable": true, "rowid": false, "id_of": null},
+				{"name": "updated_at", "words": ["updated", "at"], "sql_name": "updated_at", "type": "timestamp_ms", "custom": true, "affinity": "integer", "nullable": true, "writable": true, "rowid": false, "id_of": null}
+			],
+			"statements": [
+				{
+					"kind": "get",
+					"words": ["get", "by", "key"],
+					"sql": "select serial, username, email, display_text, role, created_at, updated_at from users where serial = ?1",
+					"params": [{"column": "serial", "index": 0, "optional": false}],
+					"key": ["serial"],
+					"returning": []
+				},
+				{
+					"kind": "get",
+					"words": ["get", "by", "username"],
+					"sql": "select serial, username, email, display_text, role, created_at, updated_at from users where username = ?1",
+					"params": [{"column": "username", "index": 1, "optional": false}],
+					"key": ["username"],
+					"returning": []
+				},
+				{
+					"kind": "get",
+					"words": ["get", "by", "email"],
+					"sql": "select serial, username, email, display_text, role, created_at, updated_at from users where email = ?1",
+					"params": [{"column": "email", "index": 2, "optional": false}],
+					"key": ["email"],
+					"returning": []
+				},
+				{
+					"kind": "insert",
+					"words": ["insert"],
+					"sql": "insert into users (username, email, display_text, role, created_at, updated_at) values (?1, ?2, ?3, coalesce(?4, ('reader')), ?5, ?6)",
+					"params": [{"column": "username", "index": 1, "optional": false}, {"column": "email", "index": 2, "optional": false}, {"column": "display_text", "index": 3, "optional": false}, {"column": "role", "index": 4, "optional": true}, {"column": "created_at", "index": 5, "optional": false}, {"column": "updated_at", "index": 6, "optional": false}],
+					"key": [],
+					"returning": []
+				},
+				{
+					"kind": "update",
+					"words": ["update", "by", "key"],
+					"sql": "update users set username = ?1, email = ?2, display_text = ?3, role = ?4, created_at = ?5, updated_at = ?6 where serial = ?7",
+					"params": [{"column": "username", "index": 1, "optional": false}, {"column": "email", "index": 2, "optional": false}, {"column": "display_text", "index": 3, "optional": false}, {"column": "role", "index": 4, "optional": false}, {"column": "created_at", "index": 5, "optional": false}, {"column": "updated_at", "index": 6, "optional": false}, {"column": "serial", "index": 0, "optional": false}],
+					"key": ["serial"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "key"],
+					"sql": "delete from users where serial = ?1",
+					"params": [{"column": "serial", "index": 0, "optional": false}],
+					"key": ["serial"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "username"],
+					"sql": "delete from users where username = ?1",
+					"params": [{"column": "username", "index": 1, "optional": false}],
+					"key": ["username"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "email"],
+					"sql": "delete from users where email = ?1",
+					"params": [{"column": "email", "index": 2, "optional": false}],
+					"key": ["email"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "username"],
+					"sql": "insert into users (username, email, display_text, role, created_at, updated_at) values (?1, ?2, ?3, coalesce(?4, ('reader')), ?5, ?6) on conflict (username) do update set email = excluded.email, display_text = excluded.display_text, role = excluded.role, created_at = excluded.created_at, updated_at = excluded.updated_at",
+					"params": [{"column": "username", "index": 1, "optional": false}, {"column": "email", "index": 2, "optional": false}, {"column": "display_text", "index": 3, "optional": false}, {"column": "role", "index": 4, "optional": true}, {"column": "created_at", "index": 5, "optional": false}, {"column": "updated_at", "index": 6, "optional": false}],
+					"key": ["username"],
+					"returning": []
+				},
+				{
+					"kind": "upsert",
+					"words": ["upsert", "on", "email"],
+					"sql": "insert into users (username, email, display_text, role, created_at, updated_at) values (?1, ?2, ?3, coalesce(?4, ('reader')), ?5, ?6) on conflict (email) do update set username = excluded.username, display_text = excluded.display_text, role = excluded.role, created_at = excluded.created_at, updated_at = excluded.updated_at",
+					"params": [{"column": "username", "index": 1, "optional": false}, {"column": "email", "index": 2, "optional": false}, {"column": "display_text", "index": 3, "optional": false}, {"column": "role", "index": 4, "optional": true}, {"column": "created_at", "index": 5, "optional": false}, {"column": "updated_at", "index": 6, "optional": false}],
+					"key": ["email"],
+					"returning": []
+				}
+			]
+		},
+		{
+			"name": "v_names",
+			"words": ["v", "names"],
+			"kind": "view",
+			"without_rowid": false,
+			"junction": false,
+			"sql_name": "v_names",
+			"origin": {"script": "sql/1.0.0/plan.sql", "line": 34, "patch": "1.0.0"},
+			"id_column": null,
+			"select_list": "username",
+			"columns": [
+				{"name": "username", "words": ["username"], "sql_name": "username", "type": "text", "custom": false, "affinity": "text", "nullable": true, "writable": false, "rowid": false, "id_of": null}
+			],
+			"statements": []
+		}
+	],
+	"scripts": {
+		"systables": {
+			"name": "sys.sql",
+			"path": "sys.sql",
+			"text": "create table if not exists sys_state (id integer primary key check (id = 1), created_at integer not null);\n"
+		},
+		"patches": [
+			{
+				"version": "1.0.0",
+				"major": 1,
+				"minor": 0,
+				"patch": 0,
+				"prerelease": "",
+				"build": "",
+				"scripts": [
+					{
+						"name": "plan.sql",
+						"path": "sql/1.0.0/plan.sql",
+						"text": "create table users (\n\tserial       integer primary key autoincrement,\n\tusername     text    not null unique,\n\temail        text    not null unique,\n\tdisplay_text text,\n\trole         text    not null default 'reader',\n\tcreated_at   integer not null,\n\tupdated_at   integer\n);\n\ncreate table sessions (\n\tserial     integer primary key autoincrement,\n\tuser       integer not null references users,\n\tfamily     text    not null,\n\ttoken_hash text    not null unique,\n\texpires_at integer not null,\n\tcreated_at integer not null\n);\ncreate index ix_sessions_user_family on sessions(user, family);\n\ncreate table tag (id integer primary key, slug text not null unique, \"order\" integer not null default 0);\n\ncreate table user_tag (\n\tuser integer not null references users,\n\ttag  integer not null references tag,\n\tprimary key (user, tag)\n) without rowid;\ncreate index ix_user_tag_tag on user_tag(tag);\n\ncreate table setting (name text primary key, value text not null) without rowid;\n\ncreate table doubled (id integer primary key, w integer not null, twice integer generated always as (w * 2) virtual);\n\ncreate view v_names as select username from users;\n"
+					}
+				]
+			}
+		]
+	}
+}

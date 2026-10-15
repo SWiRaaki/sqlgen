@@ -1,0 +1,11 @@
+{
+	"targets": [
+		{ "language": "c", "dir": "out", "types": { "timestamp-ms": "int64_t", "money": "" } },
+		{ "language": "c", "dir": "out/" },
+		{ "language": "c", "dir": "other", "namespace": "db" },
+		{ "dir": "x" },
+		{ "language": "odin" },
+		"c"
+	],
+	"types": { "by_name": { "*_at": "timestamp ms" } }
+}

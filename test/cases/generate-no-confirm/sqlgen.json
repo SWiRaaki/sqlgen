@@ -1,0 +1,1 @@
+{ "schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" }, "generate": { "embed_scripts": false }, "targets": [{ "language": "c", "dir": "gen", "confirm_clear": false }] }

@@ -1,0 +1,10 @@
+{
+	"schema": { "patchs": "sql/*/", "foreign_keys": "yes" },
+	"generate": { "typed_ids": 1 },
+	"targets": [{ "language": "c", "prefix": "9lives" }],
+	"types": { "by_name": { "*_at": 3 } },
+	"tables": { "users": { "writes": ["insert", "replace"] }, "x": { "write": true }, "y": [] },
+	"rules": { "created_at": "fatal", "pk_naming": { "level": "warn", "names": ["id"] }, "z": 1 },
+	"queries": "q/*.sql",
+	"extra": null
+}

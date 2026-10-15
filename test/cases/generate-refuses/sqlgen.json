@@ -1,0 +1,1 @@
+{ "schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" }, "targets": [{ "language": "c", "dir": "gen" }] }

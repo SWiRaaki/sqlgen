@@ -8,6 +8,13 @@
 #include <unistd.h>
 
 static unsigned g_errors;
+static void   (*g_sink)(const char *line, void *user);
+static void    *g_sink_user;
+
+void sg_set_error_sink(void (*sink)(const char *line, void *user), void *user) {
+	g_sink      = sink;
+	g_sink_user = user;
+}
 
 static SG_NORETURN void out_of_memory(void) {
 	fputs("sqlgen: out of memory\n", stderr);
@@ -16,18 +23,29 @@ static SG_NORETURN void out_of_memory(void) {
 
 static void report(const char *kind, const char *file, unsigned line, unsigned col,
 		const char *fmt, va_list args) {
+	char head[1024];
+	char body[2048];
+
 	if (file && line && col) {
-		fprintf(stderr, "%s:%u:%u: %s: ", file, line, col, kind);
+		snprintf(head, sizeof head, "%s:%u:%u: %s: ", file, line, col, kind);
 	} else if (file && line) {
-		fprintf(stderr, "%s:%u: %s: ", file, line, kind);
+		snprintf(head, sizeof head, "%s:%u: %s: ", file, line, kind);
 	} else if (file) {
-		fprintf(stderr, "%s: %s: ", file, kind);
+		snprintf(head, sizeof head, "%s: %s: ", file, kind);
 	} else {
-		fprintf(stderr, "sqlgen: %s: ", kind);
+		snprintf(head, sizeof head, "sqlgen: %s: ", kind);
 	}
 
-	vfprintf(stderr, fmt, args);
-	fputc('\n', stderr);
+	vsnprintf(body, sizeof body, fmt, args);
+
+	if (g_sink) {
+		char line_text[sizeof head + sizeof body];
+
+		snprintf(line_text, sizeof line_text, "%s%s", head, body);
+		g_sink(line_text, g_sink_user);
+	} else {
+		fprintf(stderr, "%s%s\n", head, body);
+	}
 }
 
 void sg_error(const char *file, unsigned line, unsigned col, const char *fmt, ...) {
@@ -367,4 +385,39 @@ bool sg_contains_nocase(const char *haystack, const char *needle) {
 	}
 
 	return false;
+}
+
+static bool word_char(char c) {
+	return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+}
+
+static bool upper_char(char c) {
+	return c >= 'A' && c <= 'Z';
+}
+
+void sg_split_words(const char *name, void (*emit)(const char *word, void *user), void *user) {
+	size_t start = 0;
+	size_t len   = strlen(name);
+
+	for (size_t at = 0; at <= len; ++at) {
+		bool boundary = at == len || !word_char(name[at])
+				|| (at > start && upper_char(name[at]) && !upper_char(name[at - 1]));
+
+		if (!boundary) {
+			continue;
+		}
+
+		if (at > start) {
+			char *word = sg_xstrndup(name + start, at - start);
+
+			for (char *c = word; *c; ++c) {
+				*c = upper_char(*c) ? (char)(*c - 'A' + 'a') : *c;
+			}
+
+			emit(word, user);
+			free(word);
+		}
+
+		start = at < len && word_char(name[at]) ? at : at + 1;
+	}
 }

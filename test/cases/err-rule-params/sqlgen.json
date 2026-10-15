@@ -1,0 +1,9 @@
+{
+	"rules": {
+		"pk_naming": { "level": "warn", "serial": "row_id" },
+		"created_at": { "level": "warn", "column": 5 },
+		"prefix_origin": "warn",
+		"strict": { "level": "warn", "tables": "all" },
+		"stamp_type": { "level": "off", "pattern": null }
+	}
+}

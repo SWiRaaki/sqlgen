@@ -13,7 +13,8 @@ enum {
 	K_BOOL       = 1 << 1,
 	K_TEXT_ARRAY = 1 << 2,
 	K_OBJECT     = 1 << 3,
-	K_NULL       = 1 << 4
+	K_NULL       = 1 << 4,
+	K_OBJECTS    = 1 << 5     /* an array of objects */
 };
 
 typedef struct {
@@ -29,9 +30,10 @@ typedef struct {
 } reader;
 
 static const field TOP[] = {
-	{ "schema",  K_OBJECT },
-	{ "output",  K_OBJECT },
-	{ "types",   K_OBJECT },
+	{ "schema",   K_OBJECT },
+	{ "generate", K_OBJECT },
+	{ "targets",  K_OBJECTS },
+	{ "types",    K_OBJECT },
 	{ "tables",  K_OBJECT },
 	{ "rules",   K_OBJECT },
 	{ "queries", K_TEXT_ARRAY },
@@ -46,12 +48,29 @@ static const field SCHEMA[] = {
 	{ NULL, 0 }
 };
 
-static const field OUTPUT[] = {
-	{ "dir",           K_TEXT },
-	{ "prefix",        K_TEXT },
+static const field GENERATE[] = {
 	{ "embed_scripts", K_BOOL },
 	{ "typed_ids",     K_BOOL },
 	{ NULL, 0 }
+};
+
+/* The keys of a target: the ones every language takes, then each language's own. */
+static const field TARGET_C[] = {
+	{ "language",      K_TEXT },
+	{ "dir",           K_TEXT },
+	{ "templates",     K_TEXT | K_NULL },
+	{ "confirm_clear", K_BOOL },
+	{ "types",         K_OBJECT },
+	{ "prefix",        K_TEXT },
+	{ NULL, 0 }
+};
+
+static const struct {
+	const char  *name;
+	const field *keys;
+} LANGUAGES[] = {
+	{ "c", TARGET_C },
+	{ NULL, NULL }
 };
 
 static const field TYPES[] = {
@@ -144,7 +163,9 @@ static const struct {
 #define DEFAULT_PATCHES               "sql/*/"
 #define DEFAULT_DOUBLE_QUOTED_STRINGS false
 #define DEFAULT_FOREIGN_KEYS          true
-#define DEFAULT_OUTPUT_DIR            "gen"
+#define DEFAULT_LANGUAGE              "c"
+#define DEFAULT_TARGET_DIR            "gen"
+#define DEFAULT_CONFIRM_CLEAR         true
 #define DEFAULT_PREFIX                "db"
 #define DEFAULT_EMBED_SCRIPTS         true
 #define DEFAULT_TYPED_IDS             true
@@ -158,12 +179,20 @@ static const char DEFAULT_TEXT[] =
 	"\t\t\"double_quoted_strings\": false,\n"
 	"\t\t\"foreign_keys\": true\n"
 	"\t},\n"
-	"\t\"output\": {\n"
-	"\t\t\"dir\": \"" DEFAULT_OUTPUT_DIR "\",\n"
-	"\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
+	"\t\"generate\": {\n"
 	"\t\t\"embed_scripts\": true,\n"
 	"\t\t\"typed_ids\": true\n"
 	"\t},\n"
+	"\t\"targets\": [\n"
+	"\t\t{\n"
+	"\t\t\t\"language\": \"" DEFAULT_LANGUAGE "\",\n"
+	"\t\t\t\"dir\": \"" DEFAULT_TARGET_DIR "\",\n"
+	"\t\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
+	"\t\t\t\"templates\": null,\n"
+	"\t\t\t\"confirm_clear\": true,\n"
+	"\t\t\t\"types\": {}\n"
+	"\t\t}\n"
+	"\t],\n"
 	"\t\"types\": {\n"
 	"\t\t\"by_declared\": {},\n"
 	"\t\t\"by_name\": {}\n"
@@ -253,6 +282,7 @@ static const char *describe(unsigned kinds) {
 	case K_TEXT | K_TEXT_ARRAY: return "a string or an array of strings";
 	case K_BOOL | K_TEXT_ARRAY: return "true, false or an array of strings";
 	case K_TEXT | K_NULL:       return "a string or null";
+	case K_OBJECTS:             return "an array of objects";
 	default:                    return "something else";
 	}
 }
@@ -266,6 +296,23 @@ static bool check_text_array(reader *r, const char *path) {
 
 		if (strcmp(type, "text") != 0) {
 			problem(r, (const char *)sqlite3_column_text(stmt, 1), " must be a string, not %s", type, NULL);
+			ok = false;
+		}
+	}
+
+	sqlite3_finalize(stmt);
+	return ok;
+}
+
+static bool check_object_array(reader *r, const char *path) {
+	sqlite3_stmt *stmt = each(r, path);
+	bool          ok   = stmt != NULL;
+
+	while (stmt && sqlite3_step(stmt) == SQLITE_ROW) {
+		const char *type = (const char *)sqlite3_column_text(stmt, 2);
+
+		if (strcmp(type, "object") != 0) {
+			problem(r, (const char *)sqlite3_column_text(stmt, 1), " must be an object, not %s", type, NULL);
 			ok = false;
 		}
 	}
@@ -292,7 +339,8 @@ static bool kind_matches(reader *r, const char *fullkey, const char *type, unsig
 	}
 
 	if (strcmp(type, "array") == 0) {
-		return (kinds & K_TEXT_ARRAY) != 0 && check_text_array(r, fullkey);
+		return ((kinds & K_TEXT_ARRAY) != 0 && check_text_array(r, fullkey))
+				|| ((kinds & K_OBJECTS) != 0 && check_object_array(r, fullkey));
 	}
 
 	return false;
@@ -316,9 +364,14 @@ static bool check_object(reader *r, const char *path, const field *fields) {
 			}
 		}
 
+		bool elements = strcmp(type, "array") == 0 && (match ? match->kinds & (K_TEXT_ARRAY | K_OBJECTS) : 0);
+
 		if (!match) {
 			problem(r, fullkey, ": unknown key", NULL, NULL);
 			ok = false;
+		} else if (elements) {
+			/* Each element in the wrong shape has been reported where it is. */
+			ok = kind_matches(r, fullkey, type, match->kinds) && ok;
 		} else if (!kind_matches(r, fullkey, type, match->kinds)) {
 			problem(r, fullkey, " must be %s, not %s", describe(match->kinds), type);
 			ok = false;
@@ -374,8 +427,9 @@ static bool is_identifier(const char *text) {
 	return true;
 }
 
-/* An object whose every value is a string, collected as pairs. */
-static bool read_pairs(reader *r, const char *path, sg_pair_vec *pairs) {
+/* An object whose every value is a string, collected as pairs. With @p logical, every value must
+ * be a logical type name (an identifier); with @p logical_keys, every key must be one. */
+static bool read_pairs(reader *r, const char *path, sg_pair_vec *pairs, bool logical, bool logical_keys) {
 	sqlite3_stmt *stmt = prepare(r, "select key, fullkey, type, value from json_each(?1, ?2)", path);
 	bool          ok   = stmt != NULL;
 
@@ -388,10 +442,33 @@ static bool read_pairs(reader *r, const char *path, sg_pair_vec *pairs) {
 			continue;
 		}
 
+		const char *key   = (const char *)sqlite3_column_text(stmt, 0);
+		const char *value = (const char *)sqlite3_column_text(stmt, 3);
+
+		if (logical && !is_identifier(value)) {
+			problem(r, (const char *)sqlite3_column_text(stmt, 1), ": '%s' is not a logical type name;"
+					" use letters, digits and _", value, NULL);
+			ok = false;
+			continue;
+		}
+
+		if (logical_keys && !is_identifier(key)) {
+			problem(r, (const char *)sqlite3_column_text(stmt, 1), ": '%s' is not a logical type name;"
+					" use letters, digits and _", key, NULL);
+			ok = false;
+			continue;
+		}
+
+		if (value[0] == '\0') {
+			problem(r, (const char *)sqlite3_column_text(stmt, 1), " must not be empty", NULL, NULL);
+			ok = false;
+			continue;
+		}
+
 		sg_pair *pair = SG_PUSH(*pairs);
 
-		pair->key   = sg_xstrdup((const char *)sqlite3_column_text(stmt, 0));
-		pair->value = sg_xstrdup((const char *)sqlite3_column_text(stmt, 3));
+		pair->key   = sg_xstrdup(key);
+		pair->value = sg_xstrdup(value);
 	}
 
 	sqlite3_finalize(stmt);
@@ -620,6 +697,128 @@ static bool syntax_ok(reader *r, size_t length) {
 	return false;
 }
 
+static void default_target(sg_config *config) {
+	sg_target *target = SG_PUSH(config->targets);
+
+	target->language      = sg_xstrdup(DEFAULT_LANGUAGE);
+	target->dir           = sg_path_join(config->dir, DEFAULT_TARGET_DIR);
+	target->prefix        = sg_xstrdup(DEFAULT_PREFIX);
+	target->confirm_clear = DEFAULT_CONFIRM_CLEAR;
+}
+
+static bool read_target(reader *r, const char *fullkey, sg_config *config) {
+	char        *path     = sg_format("%s.language", fullkey);
+	char        *language = text_at(r, path);
+	const field *keys     = NULL;
+	bool         ok       = true;
+
+	free(path);
+
+	for (size_t i = 0; language && LANGUAGES[i].name; ++i) {
+		if (strcmp(LANGUAGES[i].name, language) == 0) {
+			keys = LANGUAGES[i].keys;
+		}
+	}
+
+	if (!language) {
+		problem(r, fullkey, ": language is required", NULL, NULL);
+		return false;
+	}
+
+	if (!keys) {
+		problem(r, fullkey, ": unknown language '%s'; known: c", language, NULL);
+		free(language);
+		return false;
+	}
+
+	if (!check_object(r, fullkey, keys)) {
+		free(language);
+		return false;
+	}
+
+	sg_target *target = SG_PUSH(config->targets);
+	char      *key;
+
+	target->language = language;
+
+	key = sg_format("%s.dir", fullkey);
+	char *dir = text_at(r, key);
+	target->dir = sg_path_join(config->dir, dir ? dir : DEFAULT_TARGET_DIR);
+	free(dir);
+	free(key);
+
+	/* "out" and "out/" are one directory, which the check for shared directories has to see. */
+	for (size_t len = strlen(target->dir); len > 1 && target->dir[len - 1] == '/'; --len) {
+		target->dir[len - 1] = '\0';
+	}
+
+	key = sg_format("%s.templates", fullkey);
+	char *templates = text_at(r, key);
+	target->templates = templates ? sg_path_join(config->dir, templates) : NULL;
+	free(templates);
+	free(key);
+
+	key = sg_format("%s.confirm_clear", fullkey);
+	target->confirm_clear = flag_at(r, key, DEFAULT_CONFIRM_CLEAR);
+	free(key);
+
+	key = sg_format("%s.types", fullkey);
+	char *types = type_at(r, key);
+	if (types && strcmp(types, "object") == 0) {
+		ok = read_pairs(r, key, &target->types, false, true) && ok;
+	}
+	free(types);
+	free(key);
+
+	if (strcmp(language, "c") == 0) {
+		key = sg_format("%s.prefix", fullkey);
+		target->prefix = text_at(r, key);
+
+		if (!target->prefix) {
+			target->prefix = sg_xstrdup(DEFAULT_PREFIX);
+		} else if (!is_identifier(target->prefix)) {
+			problem(r, key, ": '%s' is not a C identifier", target->prefix, NULL);
+			ok = false;
+		}
+
+		free(key);
+	}
+
+	return ok;
+}
+
+/* Each target clears its directory, so two sharing one would delete each other's files. */
+static bool read_targets(reader *r, sg_config *config, bool present) {
+	bool ok = true;
+
+	if (!present) {
+		default_target(config);
+		return true;
+	}
+
+	sqlite3_stmt *stmt = each(r, "$.targets");
+
+	while (stmt && sqlite3_step(stmt) == SQLITE_ROW) {
+		if (strcmp((const char *)sqlite3_column_text(stmt, 2), "object") == 0) {
+			ok = read_target(r, (const char *)sqlite3_column_text(stmt, 1), config) && ok;
+		}
+	}
+
+	sqlite3_finalize(stmt);
+
+	for (size_t i = 0; i < config->targets.count; ++i) {
+		for (size_t j = i + 1; j < config->targets.count; ++j) {
+			if (strcmp(config->targets.items[i].dir, config->targets.items[j].dir) == 0) {
+				sg_error(r->file, 0, 0, "$.targets[%zu] and $.targets[%zu] both write to %s; each target"
+						" clears its directory", i, j, config->targets.items[i].dir);
+				ok = false;
+			}
+		}
+	}
+
+	return ok;
+}
+
 static bool validate(reader *r) {
 	char *top = type_at(r, "$");
 	bool  ok  = true;
@@ -642,11 +841,11 @@ static bool validate(reader *r) {
 
 	free(schema);
 
-	char *output = type_at(r, "$.output");
+	char *output = type_at(r, "$.generate");
 	char *types  = type_at(r, "$.types");
 
 	if (output && strcmp(output, "object") == 0) {
-		ok = check_object(r, "$.output", OUTPUT) && ok;
+		ok = check_object(r, "$.generate", GENERATE) && ok;
 	}
 
 	if (types && strcmp(types, "object") == 0) {
@@ -687,32 +886,23 @@ static bool read_values(reader *r, sg_config *config) {
 			DEFAULT_DOUBLE_QUOTED_STRINGS);
 	config->foreign_keys          = flag_at(r, "$.schema.foreign_keys", DEFAULT_FOREIGN_KEYS);
 
-	char *dir = text_at(r, "$.output.dir");
+	config->embed_scripts = flag_at(r, "$.generate.embed_scripts", DEFAULT_EMBED_SCRIPTS);
+	config->typed_ids     = flag_at(r, "$.generate.typed_ids", DEFAULT_TYPED_IDS);
 
-	config->output_dir = sg_path_join(config->dir, dir ? dir : DEFAULT_OUTPUT_DIR);
-	free(dir);
+	char *targets = type_at(r, "$.targets");
 
-	config->prefix = text_at(r, "$.output.prefix");
-
-	if (!config->prefix) {
-		config->prefix = sg_xstrdup(DEFAULT_PREFIX);
-	} else if (!is_identifier(config->prefix)) {
-		sg_error(r->file, 0, 0, "$.output.prefix '%s' is not a C identifier", config->prefix);
-		ok = false;
-	}
-
-	config->embed_scripts = flag_at(r, "$.output.embed_scripts", DEFAULT_EMBED_SCRIPTS);
-	config->typed_ids     = flag_at(r, "$.output.typed_ids", DEFAULT_TYPED_IDS);
+	ok = read_targets(r, config, targets && strcmp(targets, "array") == 0) && ok;
+	free(targets);
 
 	char *by_name     = type_at(r, "$.types.by_name");
 	char *by_declared = type_at(r, "$.types.by_declared");
 
 	if (by_name && strcmp(by_name, "object") == 0) {
-		ok = read_pairs(r, "$.types.by_name", &config->types_by_name) && ok;
+		ok = read_pairs(r, "$.types.by_name", &config->types_by_name, true, false) && ok;
 	}
 
 	if (by_declared && strcmp(by_declared, "object") == 0) {
-		ok = read_pairs(r, "$.types.by_declared", &config->types_by_declared) && ok;
+		ok = read_pairs(r, "$.types.by_declared", &config->types_by_declared, true, false) && ok;
 	}
 
 	free(by_name);
@@ -797,8 +987,23 @@ void sg_config_free(sg_config *config) {
 	}
 
 	free(config->patch_patterns.items);
-	free(config->output_dir);
-	free(config->prefix);
+	for (size_t i = 0; i < config->targets.count; ++i) {
+		sg_target *target = &config->targets.items[i];
+
+		free(target->language);
+		free(target->dir);
+		free(target->prefix);
+		free(target->templates);
+
+		for (size_t p = 0; p < target->types.count; ++p) {
+			free(target->types.items[p].key);
+			free(target->types.items[p].value);
+		}
+
+		free(target->types.items);
+	}
+
+	free(config->targets.items);
 
 	for (size_t i = 0; i < config->types_by_name.count; ++i) {
 		free(config->types_by_name.items[i].key);

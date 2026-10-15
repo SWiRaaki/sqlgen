@@ -1,0 +1,2 @@
+sqlgen.json: error: $.tables.users.writes: link needs a junction -- two integer columns, each a foreign key, unique together -- and users is none
+sqlgen.json: error: $.tables.v_names.writes: v_names is a view, which cannot be written

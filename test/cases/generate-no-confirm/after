@@ -1,0 +1,3 @@
+ls gen | tr "\n" " "; echo
+test -e /etc/passwd && echo "the link was removed, not followed"
+rm -rf gen

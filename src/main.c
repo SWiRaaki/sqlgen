@@ -6,11 +6,13 @@
 
 #include "config.h"
 #include "model.h"
+#include "plan.h"
 #include "rules.h"
 #include "schema.h"
+#include "generate.h"
 #include "util.h"
+#include "version.h"
 
-#define SQLGEN_VERSION "0.1.0-dev"
 
 enum {
 	EXIT_INPUT = 1,   /* The input has problems; they were reported. */
@@ -19,12 +21,15 @@ enum {
 
 typedef struct {
 	const char *command;
+	const char *args[2];        /* positional arguments after the command */
+	size_t      arg_count;
 	const char *config;
 	bool        config_given;   /* -c was used, so a missing file is a mistake, not a first run */
 	const char *output;
 	const char *database;
 	const char *key;
 	bool        strict;         /* --strict: warnings are errors */
+	bool        yes;            /* --yes: clear output directories without asking */
 } options;
 
 static void usage(FILE *to) {
@@ -34,9 +39,12 @@ static void usage(FILE *to) {
 			"  init      write a configuration with every default (sqlgen.json, or -c)\n"
 			"  model     load the schema and print its model as JSON\n"
 			"  check     load the schema and check it against the rules; writes nothing\n"
+			"  plan      check the schema, then print what would be generated as JSON\n"
 			"  report    print the model of an existing database as JSON, and check it\n"
 			"            (rule levels from -c when given, else the defaults)\n"
-			"  generate  write the generated sources (not implemented)\n"
+			"  generate  check the schema, then write every target's files\n"
+			"  templates <language> <dir>\n"
+			"            write a language's built-in templates into dir, to copy and change\n"
 			"\n"
 			"options:\n"
 			"  -c, --config <file>  configuration (default: sqlgen.json, written with every\n"
@@ -45,6 +53,7 @@ static void usage(FILE *to) {
 			"      --db <file>      the database to report on\n"
 			"      --key <key>      its encryption key (needs a build with CIPHER=1)\n"
 			"      --strict         treat rule warnings as errors\n"
+			"      --yes            clear output directories without asking\n"
 			"  -h, --help           this text\n"
 			"      --version        sqlgen and SQLite versions\n", to);
 }
@@ -68,11 +77,15 @@ static bool parse(int argc, char **argv, options *out) {
 			out->key = argv[++i];
 		} else if (strcmp(arg, "--strict") == 0) {
 			out->strict = true;
+		} else if (strcmp(arg, "--yes") == 0) {
+			out->yes = true;
 		} else if (arg[0] == '-') {
 			sg_error(NULL, 0, 0, "unknown option or missing value: %s", arg);
 			return false;
 		} else if (!out->command) {
 			out->command = arg;
+		} else if (out->arg_count < 2) {
+			out->args[out->arg_count++] = arg;
 		} else {
 			sg_error(NULL, 0, 0, "unexpected argument: %s", arg);
 			return false;
@@ -153,7 +166,14 @@ static bool first_run(const options *opts) {
 	return true;
 }
 
-static int run_schema(const options *opts, bool print) {
+typedef enum {
+	MODE_MODEL,   /* print the model */
+	MODE_CHECK,   /* run the rules */
+	MODE_PLAN,    /* run the rules, then print the plan */
+	MODE_GENERATE /* run the rules, then generate */
+} mode;
+
+static int run_schema(const options *opts, mode what) {
 	sg_config   config  = {0};
 	sg_patchset patches = {0};
 	sg_model    model   = {0};
@@ -176,12 +196,45 @@ static int run_schema(const options *opts, bool print) {
 
 	sg_schema_attach_origins(&patches, &model);
 
-	if (print) {
+	if (what == MODE_MODEL) {
 		sg_buf json = {0};
 
 		sg_model_write_json(&model, &patches, NULL, &json);
 		status = emit(opts, &json) ? 0 : EXIT_INPUT;
 		sg_buf_free(&json);
+	} else if (what == MODE_GENERATE) {
+		sg_rules_input      input   = { db, &model, &config, NULL, opts->strict };
+		sg_rules_result     result;
+		sg_plan             plan    = {0};
+		sg_generate_options settings = { opts->config, opts->yes };
+
+		sg_rules_run(&input, &result);
+
+		if (result.errors) {
+			failed(&result);
+		} else if (sg_plan_build(&model, &patches, &config, &plan) && sg_generate(&config, &plan, &settings)) {
+			status = 0;
+		}
+
+		sg_plan_free(&plan);
+	} else if (what == MODE_PLAN) {
+		sg_rules_input  input = { db, &model, &config, NULL, opts->strict };
+		sg_rules_result result;
+		sg_plan         plan  = {0};
+
+		sg_rules_run(&input, &result);
+
+		if (result.errors) {
+			failed(&result);
+		} else if (sg_plan_build(&model, &patches, &config, &plan)) {
+			sg_buf json = {0};
+
+			sg_plan_write_json(&plan, &json);
+			status = emit(opts, &json) ? 0 : EXIT_INPUT;
+			sg_buf_free(&json);
+		}
+
+		sg_plan_free(&plan);
 	} else {
 		sg_rules_input  input  = { db, &model, &config, NULL, opts->strict };
 		sg_rules_result result;
@@ -306,16 +359,30 @@ int main(int argc, char **argv) {
 		return EXIT_USAGE;
 	}
 
+	if (opts.arg_count && strcmp(opts.command, "templates") != 0) {
+		sg_error(NULL, 0, 0, "unexpected argument: %s", opts.args[0]);
+		usage(stderr);
+		return EXIT_USAGE;
+	}
+
 	if (strcmp(opts.command, "init") == 0) {
 		return run_init(&opts);
 	}
 
 	if (strcmp(opts.command, "model") == 0) {
-		return run_schema(&opts, true);
+		return run_schema(&opts, MODE_MODEL);
 	}
 
 	if (strcmp(opts.command, "check") == 0) {
-		return run_schema(&opts, false);
+		return run_schema(&opts, MODE_CHECK);
+	}
+
+	if (strcmp(opts.command, "plan") == 0) {
+		if (first_run(&opts)) {
+			return EXIT_INPUT;
+		}
+
+		return run_schema(&opts, MODE_PLAN);
 	}
 
 	if (strcmp(opts.command, "report") == 0) {
@@ -323,13 +390,20 @@ int main(int argc, char **argv) {
 	}
 
 	if (strcmp(opts.command, "generate") == 0) {
-		/* The same first-run rule as every other command that needs a configuration. */
 		if (first_run(&opts)) {
 			return EXIT_INPUT;
 		}
 
-		sg_error(NULL, 0, 0, "generate is not implemented");
-		return EXIT_USAGE;
+		return run_schema(&opts, MODE_GENERATE);
+	}
+
+	if (strcmp(opts.command, "templates") == 0) {
+		if (opts.arg_count != 2) {
+			sg_error(NULL, 0, 0, "templates needs a language and a directory: sqlgen templates c my-templates");
+			return EXIT_USAGE;
+		}
+
+		return sg_export_templates(opts.args[0], opts.args[1]) ? 0 : EXIT_INPUT;
 	}
 
 	sg_error(NULL, 0, 0, "unknown command: %s", opts.command);

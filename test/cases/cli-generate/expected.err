@@ -1,1 +1,1 @@
-sqlgen: error: generate is not implemented
+sqlgen.json: error: $.schema.patches: 'sql/*/' matches nothing

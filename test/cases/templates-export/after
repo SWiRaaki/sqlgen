@@ -1,0 +1,4 @@
+ls tpl
+"$SQLGEN" templates c tpl
+echo "exit=$?"
+rm -rf tpl

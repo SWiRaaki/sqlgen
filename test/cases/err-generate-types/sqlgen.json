@@ -1,0 +1,5 @@
+{
+	"schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" },
+	"types": { "by_name": { "*_at": "timestamp_ms", "username": "handle" } },
+	"targets": [{ "language": "c", "dir": "gen" }]
+}

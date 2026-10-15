@@ -1,0 +1,3 @@
+head -2 gen/db.h
+ls gen | wc -l
+rm -rf tpl gen

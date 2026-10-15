@@ -139,6 +139,12 @@ sg_table *sg_model_table(const sg_model *model, const char *name);
 /** @brief Find a column by name, case-insensitively like @ref sg_model_table; NULL when there is none. */
 sg_column *sg_table_column(const sg_table *table, const char *name);
 
+/** @brief Whether @p name must be quoted in SQL: a keyword, or not a plain identifier. */
+bool sg_needs_quote(const char *name);
+
+/** @brief @p name as SQL needs it: in double quotes when @ref sg_needs_quote says so, else as is. */
+char *sg_sql_identifier(const char *name);
+
 /** @brief The affinity's name as SQLite's documentation spells it, lowercase. */
 const char *sg_affinity_name(sg_affinity affinity);
 

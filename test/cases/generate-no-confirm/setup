@@ -1,0 +1,4 @@
+rm -rf gen
+mkdir -p gen/old
+echo old > gen/old/stale.txt
+ln -s /etc gen/link

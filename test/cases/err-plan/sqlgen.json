@@ -1,0 +1,4 @@
+{
+	"schema": { "systables": null, "patches": "../plan/sql/*/" },
+	"tables": { "v_names": { "writes": ["insert"] }, "users": { "writes": ["link"] } }
+}

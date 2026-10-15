@@ -7,7 +7,7 @@
 # A case is a directory holding:
 #   args           the arguments, one line, as a shell would split them
 #   build          optional; "plain" or "cipher" -- the case runs only against that build
-#   setup          optional; run first with bash, with $MKDB set (for cases needing a database file)
+#   setup          optional; run first with bash, with $MKDB and $SQLGEN set
 #   after          optional; run afterwards with bash, with $SQLGEN set; its output is compared with
 #                  expected.after (for checking files a run wrote, or a second run)
 #   expected.out   standard output   (absent means: must be empty)
@@ -17,6 +17,9 @@
 # sqlgen runs inside the case directory, so every path in the expectations is relative to it.
 
 set -u
+
+# Generated files carry their generation time; a fixed one makes them comparable.
+export SOURCE_DATE_EPOCH=1700000000
 
 sqlgen=$(realpath "$1")
 mkdb=$(realpath "$2")
@@ -67,13 +70,14 @@ for dir in "$here"/cases/*/; do
 	mkdir -p "$result"
 
 	if [ -f "$dir/setup" ]; then
-		(cd "$dir" && MKDB="$mkdb" bash setup) > "$result/setup.log" 2>&1 || {
+		(cd "$dir" && MKDB="$mkdb" SQLGEN="$sqlgen" bash setup) > "$result/setup.log" 2>&1 || {
 			echo "FAIL $name (setup)"; cat "$result/setup.log"; fail=$((fail + 1)); continue
 		}
 	fi
 
 	read -r -a args < "$dir/args"
-	(cd "$dir" && "$sqlgen" "${args[@]}") > "$result/out" 2> "$result/err"
+	# No terminal on standard input, wherever the tests are started from, so nothing waits for an answer.
+	(cd "$dir" && "$sqlgen" "${args[@]}") < /dev/null > "$result/out" 2> "$result/err"
 	echo $? > "$result/code"
 
 	if [ -f "$dir/after" ]; then

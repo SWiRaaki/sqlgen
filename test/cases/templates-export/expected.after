@@ -1,0 +1,9 @@
+api.h.gtpl
+defs.gtpl
+internal.h.gtpl
+runtime.c.gtpl
+scripts.c.gtpl
+table.c.gtpl
+table.h.gtpl
+tpl/api.h.gtpl: error: already exists; it was left as it is
+exit=1

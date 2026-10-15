@@ -1,0 +1,11 @@
+{
+	"schema": { "systables": "../real-schema/sql/system.sql", "patches": "../real-schema/sql/*/" },
+	"rules": {
+		"pk_shape": "warn",
+		"pk_naming": "warn",
+		"created_at": "warn",
+		"updated_at_needs_created_at": "warn",
+		"stamp_type": "warn",
+		"prefix_origin": { "level": "warn", "prefix": "sys_" }
+	}
+}

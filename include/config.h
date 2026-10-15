@@ -80,6 +80,21 @@ typedef struct {
 } sg_rule_config;
 
 /**
+ * @brief One entry of `targets`: a language, where its files go, and how it spells the plan.
+ *
+ * Which keys a target takes depends on its language: every target has `language`, `dir`,
+ * `templates`, `confirm_clear` and `types`; a C target also `prefix`.
+ */
+typedef struct {
+	char        *language;       //!< "c".
+	char        *dir;            //!< Where its files go; cleared on every generate.
+	char        *prefix;         //!< C: put before every generated name.
+	char        *templates;      //!< A directory of templates replacing the built-in ones; NULL for those.
+	bool         confirm_clear;  //!< Ask before clearing a directory that is not empty.
+	sg_pair_vec  types;          //!< Logical type name -> the type this language spells it as.
+} sg_target;
+
+/**
  * @brief The resolved configuration. Paths are already joined to the config file's directory.
  */
 typedef struct {
@@ -92,13 +107,12 @@ typedef struct {
 	bool  double_quoted_strings;      //!< Accept "text" as a string literal, as legacy SQLite does.
 	bool  foreign_keys;               //!< Enforce foreign keys while loading (seed rows are checked).
 
-	char *output_dir;
-	char *prefix;                     //!< Prefix for every generated identifier.
-	bool  embed_scripts;
-	bool  typed_ids;
+	bool  embed_scripts;              //!< Generate the scripts into the output, for migrating at run time.
+	bool  typed_ids;                  //!< One distinct type per primary key, used by its foreign keys.
+	SG_VEC(sg_target) targets;        //!< Absent from the file: one C target with every default.
 
-	sg_pair_vec types_by_name;        //!< Column-name pattern -> output type.
-	sg_pair_vec types_by_declared;    //!< Declared type -> output type.
+	sg_pair_vec types_by_name;        //!< Column-name glob -> logical type name.
+	sg_pair_vec types_by_declared;    //!< Declared type -> logical type name; wins over by_name.
 	SG_VEC(sg_table_config) tables;   //!< As written; resolve with @ref sg_config_table.
 	SG_VEC(sg_rule_config) rules;     //!< Every rule sqlgen knows, in a fixed order.
 	sg_str_vec queries;               //!< Glob patterns naming query files.

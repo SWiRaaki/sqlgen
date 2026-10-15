@@ -1,0 +1,6 @@
+{
+	"schema": {
+		"systables": "é.sql",
+		"patches": ["a",, "b"]
+	}
+}
