@@ -105,6 +105,20 @@ extern const size_t \(prefix)_patch_count;
 
 /* A hash of every script's name and text, in order: it changes whenever the schema does. */
 extern const char \(prefix)_schema_hash[];
+
+/*
+ * Brings db up to this program's schema, in one transaction: creates _sys_patch and _sys_script if
+ * they are missing, runs the system-tables script, then applies every patch the database lacks, in
+ * order, recording each with applied_by and the text of every script.
+ *
+ * Refused, with nothing changed: a patch the database has but this program does not carry (a newer
+ * program migrated it); an applied script whose text changed, or that vanished or was added; a
+ * missing patch older than one already applied.
+ *
+ * *applied receives how many patches ran. On failure *error receives a message, to release with
+ * sqlite3_free. Either may be NULL.
+ */
+int \(prefix)_migrate(sqlite3 *db, const char *applied_by, size_t *applied, char **error);
 \}
 
 \for (t in tables) {

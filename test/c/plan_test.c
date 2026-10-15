@@ -1,5 +1,5 @@
 /* Drives the C generated for test/cases/plan against a real database: every kind of statement,
- * the return codes, row ownership, cursors, typed ids and the embedded scripts. */
+ * the return codes, row ownership, cursors, typed ids, the embedded scripts and migration. */
 
 #include <stdio.h>
 #include <string.h>
@@ -10,16 +10,83 @@ static int failures;
 
 #define CHECK(cond) do { if (!(cond)) { printf("plan_test:%d: %s\n", __LINE__, #cond); ++failures; } } while (0)
 
-static int apply(sqlite3 *db, const db_script *script) {
-	char *message = NULL;
-	int   rc      = sqlite3_exec(db, script->sql, NULL, NULL, &message);
+static sqlite3 *fresh(void) {
+	sqlite3 *db = NULL;
 
-	if (rc != SQLITE_OK) {
-		printf("plan_test: %s: %s\n", script->name, message);
+	CHECK(sqlite3_open(":memory:", &db) == SQLITE_OK);
+	CHECK(sqlite3_exec(db, "pragma foreign_keys = on", NULL, NULL, NULL) == SQLITE_OK);
+	return db;
+}
+
+static int count_rows(sqlite3 *db, const char *sql) {
+	sqlite3_stmt *stmt = NULL;
+	int           n    = -1;
+
+	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK && sqlite3_step(stmt) == SQLITE_ROW) {
+		n = sqlite3_column_int(stmt, 0);
 	}
 
+	sqlite3_finalize(stmt);
+	return n;
+}
+
+/* Migrate a fresh database, tamper with what it recorded, and expect the next migration refused. */
+static void refused(const char *label, const char *tamper, const char *expected) {
+	sqlite3 *db      = fresh();
+	char    *message = NULL;
+	size_t   applied = 99;
+
+	CHECK(db_migrate(db, "plan_test", NULL, NULL) == SQLITE_OK);
+	CHECK(sqlite3_exec(db, tamper, NULL, NULL, NULL) == SQLITE_OK);
+
+	int rc = db_migrate(db, "plan_test", &applied, &message);
+
+	if (rc == SQLITE_OK || !message || !strstr(message, expected)) {
+		printf("plan_test: %s: expected \"%s\", got %d \"%s\"\n", label, expected, rc, message ? message : "");
+		++failures;
+	}
+
+	CHECK(applied == 0);
+	CHECK(sqlite3_get_autocommit(db));
 	sqlite3_free(message);
-	return rc;
+	sqlite3_close(db);
+}
+
+static void migration(void) {
+	sqlite3 *db      = fresh();
+	size_t   applied = 0;
+	char    *message = NULL;
+
+	CHECK(db_migrate(db, "plan_test 1.0", &applied, &message) == SQLITE_OK && applied == 2 && !message);
+	CHECK(db_migrate(db, "plan_test 1.0", &applied, &message) == SQLITE_OK && applied == 0);
+	CHECK(count_rows(db, "select count(*) from _sys_patch where applied_by = 'plan_test 1.0' and created_at > 0") == 2);
+	CHECK(count_rows(db, "select count(*) from _sys_script") == 2);
+
+	sqlite3_stmt *stmt = NULL;
+
+	CHECK(sqlite3_prepare_v2(db, "select sql from _sys_script where name = 'plan.sql'", -1, &stmt, NULL) == SQLITE_OK);
+	CHECK(sqlite3_step(stmt) == SQLITE_ROW && strcmp((const char *)sqlite3_column_text(stmt, 0), db_patches[0].scripts[0].sql) == 0);
+	sqlite3_finalize(stmt);
+
+	/* Build metadata does not tell patches apart. */
+	CHECK(sqlite3_exec(db, "update _sys_patch set build = 'other'", NULL, NULL, NULL) == SQLITE_OK);
+	CHECK(db_migrate(db, "plan_test 1.0", &applied, NULL) == SQLITE_OK && applied == 0);
+	sqlite3_close(db);
+
+	refused("changed", "update _sys_script set sql = sql || ' ' where name = 'plan.sql'",
+			"patch 1.0.0: plan.sql changed since it was applied");
+	refused("renamed", "update _sys_script set name = 'other.sql' where name = 'role.sql'",
+			"patch 1.1.0: other.sql was applied where this program carries role.sql");
+	refused("not recorded", "delete from _sys_script where name = 'role.sql'",
+			"patch 1.1.0: role.sql was added after the patch was applied");
+	refused("extra", "insert into _sys_script (patch, ordinal, name, sql, created_at)"
+			" select serial, 1, 'extra.sql', 'select 1', 0 from _sys_patch where minor = 1",
+			"patch 1.1.0: extra.sql was applied, but this program does not carry it");
+	refused("newer program", "insert into _sys_patch (major, minor, patch, prerelease, applied_by, created_at)"
+			" values (9, 0, 0, 'rc.1', 'x', 0)",
+			"the database has patch 9.0.0-rc.1, which this program does not carry");
+	refused("out of order", "delete from _sys_patch where minor = 0",
+			"patch 1.0.0 is older than 1.1.0, which is already applied");
 }
 
 static int text_is(const db_text *text, const char *expected) {
@@ -30,18 +97,13 @@ int main(void) {
 	sqlite3 *db  = NULL;
 	db_ctx  *ctx = NULL;
 
-	CHECK(sqlite3_open(":memory:", &db) == SQLITE_OK);
-	CHECK(sqlite3_exec(db, "pragma foreign_keys = on", NULL, NULL, NULL) == SQLITE_OK);
+	migration();
 
 	/* The schema, from the scripts the generator embedded. */
-	CHECK(db_systables != NULL && apply(db, db_systables) == SQLITE_OK);
-	CHECK(db_patch_count == 1 && strcmp(db_patches[0].version, "1.0.0") == 0 && db_patches[0].major == 1);
-
-	for (size_t p = 0; p < db_patch_count; ++p) {
-		for (size_t s = 0; s < db_patches[p].count; ++s) {
-			CHECK(apply(db, &db_patches[p].scripts[s]) == SQLITE_OK);
-		}
-	}
+	db = fresh();
+	CHECK(db_systables != NULL);
+	CHECK(db_patch_count == 2 && strcmp(db_patches[1].version, "1.1.0") == 0 && db_patches[1].minor == 1);
+	CHECK(db_migrate(db, "plan_test", NULL, NULL) == SQLITE_OK);
 
 	CHECK(strlen(db_schema_hash) == 16);
 	CHECK(db_ctx_open(&ctx, db) == SQLITE_OK);

@@ -497,7 +497,8 @@ static int compare_foreign_keys(const void *left, const void *right) {
 bool sg_introspect(sqlite3 *db, sg_model *out) {
 	sqlite3_stmt *stmt = prepare(db, "select name, type, wr, strict from pragma_table_list"
 			" where schema = 'main' and type in ('table', 'view', 'virtual')"
-			" and substr(name, 1, 7) <> 'sqlite_' collate nocase order by name");
+			" and substr(name, 1, 7) <> 'sqlite_' collate nocase"
+			" and substr(name, 1, 5) <> '_sys_' collate nocase order by name");
 	int           rc;
 
 	memset(out, 0, sizeof *out);

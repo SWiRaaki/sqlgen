@@ -1,0 +1,1 @@
+{ "schema": { "systables": "sys.sql", "patches": "sql/*/" } }

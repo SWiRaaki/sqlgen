@@ -61,6 +61,11 @@ bool sg_patches_find(const sg_config *config, sg_patchset *out);
  *
  * With foreign keys enabled, `pragma foreign_key_check` runs once everything is loaded, so seed
  * rows that reference nothing are found here rather than at a deployment.
+ *
+ * Two rules come from the migration the generated code performs. Names starting with `_sys_` are
+ * reserved for the tables it keeps (`_sys_patch`, `_sys_script`), so a script creating such an
+ * object is refused at that statement. And the system-tables script runs before every migration,
+ * so it is run a second time here and refused when that fails or changes the schema.
  */
 bool sg_schema_load(sqlite3 *db, const sg_config *config, sg_patchset *patches);
 

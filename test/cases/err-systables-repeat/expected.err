@@ -1,0 +1,2 @@
+sys.sql:2:1: error: UNIQUE constraint failed: sys_meta.id
+sys.sql: error: fails when run a second time; it runs before every migration, so it must be repeatable (create … if not exists, insert or ignore)

@@ -1,6 +1,6 @@
 {
 	"format": 1,
-	"hash": "9f9e610a4572aa1a",
+	"hash": "f7fdb7409cecbe04",
 	"embed_scripts": true,
 	"typed_ids": true,
 	"custom_types": ["timestamp_ms"],
@@ -462,6 +462,14 @@
 					"returning": []
 				},
 				{
+					"kind": "list",
+					"words": ["list", "by", "role"],
+					"sql": "select serial, username, email, display_text, role, created_at, updated_at from users where role = ?1 order by serial",
+					"params": [{"column": "role", "index": 4, "optional": false}],
+					"key": ["role"],
+					"returning": []
+				},
+				{
 					"kind": "insert",
 					"words": ["insert"],
 					"sql": "insert into users (username, email, display_text, role, created_at, updated_at) values (?1, ?2, ?3, coalesce(?4, ('reader')), ?5, ?6)",
@@ -499,6 +507,14 @@
 					"sql": "delete from users where email = ?1",
 					"params": [{"column": "email", "index": 2, "optional": false}],
 					"key": ["email"],
+					"returning": []
+				},
+				{
+					"kind": "delete",
+					"words": ["delete", "by", "role"],
+					"sql": "delete from users where role = ?1",
+					"params": [{"column": "role", "index": 4, "optional": false}],
+					"key": ["role"],
 					"returning": []
 				},
 				{
@@ -554,6 +570,21 @@
 						"name": "plan.sql",
 						"path": "sql/1.0.0/plan.sql",
 						"text": "create table users (\n\tserial       integer primary key autoincrement,\n\tusername     text    not null unique,\n\temail        text    not null unique,\n\tdisplay_text text,\n\trole         text    not null default 'reader',\n\tcreated_at   integer not null,\n\tupdated_at   integer\n);\n\ncreate table sessions (\n\tserial     integer primary key autoincrement,\n\tuser       integer not null references users,\n\tfamily     text    not null,\n\ttoken_hash text    not null unique,\n\texpires_at integer not null,\n\tcreated_at integer not null\n);\ncreate index ix_sessions_user_family on sessions(user, family);\n\ncreate table tag (id integer primary key, slug text not null unique, \"order\" integer not null default 0);\n\ncreate table user_tag (\n\tuser integer not null references users,\n\ttag  integer not null references tag,\n\tprimary key (user, tag)\n) without rowid;\ncreate index ix_user_tag_tag on user_tag(tag);\n\ncreate table setting (name text primary key, value text not null) without rowid;\n\ncreate table doubled (id integer primary key, w integer not null, twice integer generated always as (w * 2) virtual);\n\ncreate view v_names as select username from users;\n"
+					}
+				]
+			},
+			{
+				"version": "1.1.0",
+				"major": 1,
+				"minor": 1,
+				"patch": 0,
+				"prerelease": "",
+				"build": "",
+				"scripts": [
+					{
+						"name": "role.sql",
+						"path": "sql/1.1.0/role.sql",
+						"text": "create index if not exists ix_users_role on users(role);\n"
 					}
 				]
 			}

@@ -289,8 +289,29 @@ static void error_at(const char *path, const char *text, size_t offset, const ch
 	sg_error(path, line, col, "%s", message);
 }
 
-static void record_origins(sqlite3 *db, sg_patchset *set, sg_origin origin) {
-	sqlite3_stmt *stmt = NULL;
+/* Names starting with this belong to the tables the generated migration keeps. */
+#define RESERVED_PREFIX "_sys_"
+
+/* Compared without regard to case, as SQLite compares names. */
+static bool reserved(const char *name) {
+	const char *prefix = RESERVED_PREFIX;
+
+	for (size_t i = 0; prefix[i]; ++i) {
+		char c = name[i] >= 'A' && name[i] <= 'Z' ? (char)(name[i] - 'A' + 'a') : name[i];
+
+		if (c != prefix[i]) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/* Records which objects the last statement created; returns the name of one it created under the
+ * reserved prefix, from malloc, or NULL. */
+static char *record_origins(sqlite3 *db, sg_patchset *set, sg_origin origin) {
+	sqlite3_stmt *stmt     = NULL;
+	char         *forbidden = NULL;
 
 	for (size_t i = 0; i < set->origins.count; ++i) {
 		set->origins.items[i].seen = false;
@@ -318,6 +339,10 @@ static void record_origins(sqlite3 *db, sg_patchset *set, sg_origin origin) {
 			found->type   = sg_xstrdup(type);
 			found->name   = sg_xstrdup(name);
 			found->origin = origin;
+
+			if (!forbidden && reserved(name)) {
+				forbidden = sg_xstrdup(name);
+			}
 		}
 
 		found->seen = true;
@@ -338,6 +363,7 @@ static void record_origins(sqlite3 *db, sg_patchset *set, sg_origin origin) {
 	}
 
 	set->origins.count = kept;
+	return forbidden;
 }
 
 /* Origins are recorded after every statement that writes, not once per script: a script that drops
@@ -406,7 +432,19 @@ static bool apply_script(sqlite3 *db, const char *path, sg_patchset *set, sg_ori
 			sg_origin here = origin;
 
 			sg_line_col(text, statement_start(text, at, len), &here.line, &here.col);
-			record_origins(db, set, here);
+
+			char *forbidden = record_origins(db, set, here);
+
+			if (forbidden) {
+				char *message = sg_format("%s starts with " RESERVED_PREFIX ", which is reserved for the"
+						" tables the generated migration keeps", forbidden);
+
+				error_at(path, text, statement_start(text, at, len), message);
+				free(message);
+				free(forbidden);
+				ok = false;
+				break;
+			}
 		}
 
 		if (sqlite3_get_autocommit(db)) {
@@ -477,6 +515,50 @@ static bool run_script(sqlite3 *db, sg_patchset *set, const char *path, const ch
 	return true;
 }
 
+/* Every object's type, name and definition, as one text to compare. */
+static char *schema_text(sqlite3 *db) {
+	sqlite3_stmt *stmt = NULL;
+	sg_buf        out  = {0};
+
+	sqlite3_prepare_v2(db, "select type, name, coalesce(sql, '') from sqlite_schema order by type, name",
+			-1, &stmt, NULL);
+
+	while (stmt && sqlite3_step(stmt) == SQLITE_ROW) {
+		for (int i = 0; i < 3; ++i) {
+			sg_buf_puts(&out, (const char *)sqlite3_column_text(stmt, i));
+			sg_buf_putc(&out, '\n');
+		}
+	}
+
+	sqlite3_finalize(stmt);
+	return out.data ? out.data : sg_xstrdup("");
+}
+
+/* The generated migration runs the system-tables script before every migration, so a second run
+ * must succeed and change nothing: `create table if not exists`, `insert or ignore`. */
+static bool systables_repeatable(sqlite3 *db, sg_patchset *set) {
+	char *before = schema_text(db);
+	bool  ok     = run_script(db, set, set->systables, NULL, true);
+
+	if (!ok) {
+		sg_error(set->systables, 0, 0, "fails when run a second time; it runs before every migration, so"
+				" it must be repeatable (create … if not exists, insert or ignore)");
+	} else {
+		char *after = schema_text(db);
+
+		if (strcmp(before, after) != 0) {
+			sg_error(set->systables, 0, 0, "changes the schema when run a second time; it runs before"
+					" every migration, so it must be repeatable");
+			ok = false;
+		}
+
+		free(after);
+	}
+
+	free(before);
+	return ok;
+}
+
 bool sg_schema_load(sqlite3 *db, const sg_config *config, sg_patchset *set) {
 	int dqs = config->double_quoted_strings ? 1 : 0;
 
@@ -500,6 +582,10 @@ bool sg_schema_load(sqlite3 *db, const sg_config *config, sg_patchset *set) {
 				return false;
 			}
 		}
+	}
+
+	if (set->systables && !systables_repeatable(db, set)) {
+		return false;
 	}
 
 	return !config->foreign_keys || check_foreign_keys(db);
