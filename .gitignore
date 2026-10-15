@@ -1,0 +1,8 @@
+.*
+!.gitignore
+sqlgen
+sqlgen.json
+/bin/
+/test/out/
+/test/cases/*/test.db
+/compile_commands.json

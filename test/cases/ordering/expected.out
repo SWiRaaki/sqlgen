@@ -1,0 +1,164 @@
+{
+	"format": 1,
+	"sqlite": "3.51.2",
+	"source": {
+		"systables": null,
+		"patches": [
+			{
+				"version": "0.2.0",
+				"directory": "patches/b",
+				"scripts": ["two.sql"]
+			},
+			{
+				"version": "0.10.0-rc.1",
+				"directory": "patches/c",
+				"scripts": ["rc.sql"]
+			},
+			{
+				"version": "0.10.0",
+				"directory": "patches/a",
+				"scripts": ["ten.sql"]
+			}
+		]
+	},
+	"tables": [
+		{
+			"name": "gone",
+			"kind": "table",
+			"created": {"script": "patches/a/ten.sql", "patch": "0.10.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "back",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "two",
+			"kind": "table",
+			"created": {"script": "patches/b/two.sql", "patch": "0.2.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "x",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "created_at",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "y",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "ix_two_x",
+					"unique": false,
+					"origin": "create",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "x", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "patches/c/rc.sql", "patch": "0.10.0-rc.1", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		}
+	]
+}

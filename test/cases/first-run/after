@@ -1,0 +1,5 @@
+# The file the first run wrote is a valid configuration; a second run reads it.
+cat sqlgen.json
+"$SQLGEN" check
+echo "exit=$?"
+rm -f sqlgen.json

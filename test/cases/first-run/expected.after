@@ -1,0 +1,34 @@
+{
+	"schema": {
+		"systables": null,
+		"patches": "sql/*/",
+		"double_quoted_strings": false,
+		"foreign_keys": true
+	},
+	"output": {
+		"dir": "gen",
+		"prefix": "db",
+		"embed_scripts": true,
+		"typed_ids": true
+	},
+	"types": {
+		"by_declared": {},
+		"by_name": {}
+	},
+	"tables": {},
+	"rules": {
+		"fk_target": "error",
+		"fk_indexed": "warn",
+		"nullable_unique": "warn",
+		"strict": "off",
+		"pk_shape": "off",
+		"pk_naming": "off",
+		"created_at": "off",
+		"updated_at_needs_created_at": "off",
+		"stamp_type": "off",
+		"prefix_origin": "off"
+	},
+	"queries": []
+}
+sqlgen.json: error: $.schema.patches: 'sql/*/' matches nothing
+exit=1

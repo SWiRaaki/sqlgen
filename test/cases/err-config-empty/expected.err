@@ -1,0 +1,1 @@
+sqlgen.json: error: $.schema.patches: 'sql/*/' matches nothing

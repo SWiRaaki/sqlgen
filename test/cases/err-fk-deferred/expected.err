@@ -1,0 +1,2 @@
+sql/1.0.0/a.sql: error: cannot be committed: FOREIGN KEY constraint failed
+sqlgen: error: row 1 of c references a missing row of p

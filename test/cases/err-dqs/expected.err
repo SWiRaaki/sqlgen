@@ -1,0 +1,1 @@
+sql/1.0.0/a.sql:1:60: error: no such column: "x" - should this be a string literal in single-quotes?

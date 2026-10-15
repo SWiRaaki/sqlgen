@@ -1,0 +1,14 @@
+0.2.0
+manga.sql
+manga_interest.sql
+source_manga.sql
+person.sql
+scan_group.sql
+chapter.sql
+stats_history.sql
+tag_canonical.sql
+tag_source.sql
+source_manga_author.sql
+source_manga_artist.sql
+source_manga_tag.sql
+reserved_accounts.sql

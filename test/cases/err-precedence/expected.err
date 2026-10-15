@@ -1,0 +1,1 @@
+sql/1.0.0/patch.manifest: error: version 1.0.0+a has the same precedence as 1.0.0+b in sql/1.0.0-b/patch.manifest; build metadata does not distinguish patches

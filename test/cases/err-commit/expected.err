@@ -1,0 +1,1 @@
+sql/1.0.0/a.sql:2:1: error: ends the transaction the script runs in; a script must not COMMIT, END or ROLLBACK

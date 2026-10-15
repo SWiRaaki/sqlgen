@@ -1,0 +1,1 @@
+sql/1.0.0/a.sql:3:3: error: NOT NULL constraint failed: a.n

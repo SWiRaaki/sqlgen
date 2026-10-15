@@ -1,0 +1,3 @@
+sqlgen.json: error: $.schema.systables: 'nope.sql' does not exist
+sql/nomanifest: error: is matched by 'sql/*/' but holds no patch.manifest
+sqlgen.json: error: $.schema.patches: 'elsewhere/*/' matches nothing

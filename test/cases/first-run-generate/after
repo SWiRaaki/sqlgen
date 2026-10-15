@@ -1,0 +1,2 @@
+test -f sqlgen.json && echo "sqlgen.json written"
+rm -f sqlgen.json

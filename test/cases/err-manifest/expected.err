@@ -1,0 +1,3 @@
+sql/1.0.0/patch.manifest:3:1: error: 'missing.sql' does not exist
+sql/1.0.0/patch.manifest:4:1: error: '../escape.sql' leaves the patch directory; scripts must be inside it
+sql/1.0.0/patch.manifest:5:1: error: 'a.sql' is listed twice

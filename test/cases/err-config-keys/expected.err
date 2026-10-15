@@ -1,0 +1,12 @@
+sqlgen.json: error: $.queries must be an array of strings, not text
+sqlgen.json: error: $.extra: unknown key
+sqlgen.json: error: $.schema.patchs: unknown key
+sqlgen.json: error: $.schema.foreign_keys must be true or false, not text
+sqlgen.json: error: $.output.typed_ids must be true or false, not integer
+sqlgen.json: error: $.output.prefix '9lives' is not a C identifier
+sqlgen.json: error: $.types.by_name."*_at" must be a string, not integer
+sqlgen.json: error: $.tables.users.writes[1]: unknown write 'replace'; expected insert, update, delete, upsert or link
+sqlgen.json: error: $.tables.x.write: unknown key
+sqlgen.json: error: $.tables.y must be an object, not array
+sqlgen.json: error: $.rules.created_at: level must be "error", "warn" or "off"
+sqlgen.json: error: $.rules.z: unknown rule

@@ -1,0 +1,1197 @@
+{
+	"format": 1,
+	"sqlite": "3.51.2",
+	"source": {
+		"systables": "sys.sql",
+		"patches": [
+			{
+				"version": "1.0.0",
+				"directory": "sql/1.0.0",
+				"scripts": ["edge.sql", "view.sql"]
+			}
+		]
+	},
+	"tables": [
+		{
+			"name": "alias_pk",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "note",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": "'autoincrement'",
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "created_at",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "composite_child",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "px",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "py",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [
+				{
+					"columns": ["px", "py"],
+					"parent": "composite_parent",
+					"parent_exists": true,
+					"parent_columns": [],
+					"resolved_parent_columns": ["x", "y"],
+					"on_update": "NO ACTION",
+					"on_delete": "CASCADE",
+					"indexed": false
+				}
+			],
+			"triggers": []
+		},
+		{
+			"name": "composite_parent",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "x",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "y",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 2,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "created_at",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_composite_parent_1",
+					"unique": true,
+					"origin": "primary_key",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "x", "desc": false, "collation": "BINARY"},
+						{"name": "y", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["x", "y"], "source": "sqlite_autoindex_composite_parent_1", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "dangling",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "other",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [
+				{
+					"columns": ["other"],
+					"parent": "nowhere",
+					"parent_exists": false,
+					"parent_columns": ["id"],
+					"resolved_parent_columns": ["id"],
+					"on_update": "NO ACTION",
+					"on_delete": "NO ACTION",
+					"indexed": false
+				}
+			],
+			"triggers": []
+		},
+		{
+			"name": "desc_pk",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "v",
+					"declared_type": "INT",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_desc_pk_1",
+					"unique": true,
+					"origin": "primary_key",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "id", "desc": true, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["id"], "source": "sqlite_autoindex_desc_pk_1", "total": false}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "gen",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "w",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": "40 + 2",
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "twice",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": "virtual",
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "thrice",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": "stored",
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "idx",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "order",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": true
+				},
+				{
+					"name": "with space",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": true
+				},
+				{
+					"name": "sqlitedata",
+					"declared_type": "INT",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "created_at",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "ix_idx_desc",
+					"unique": false,
+					"origin": "create",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "created_at", "desc": true, "collation": "BINARY"},
+						{"name": "order", "desc": false, "collation": "nocase"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				},
+				{
+					"name": "ux_idx_lower",
+					"unique": true,
+					"origin": "create",
+					"partial": false,
+					"expression": true,
+					"columns": [
+						{"name": null, "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				},
+				{
+					"name": "ux_idx_partial",
+					"unique": true,
+					"origin": "create",
+					"partial": true,
+					"expression": false,
+					"columns": [
+						{"name": "with space", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": ["t_idx"]
+		},
+		{
+			"name": "int_pk",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INT",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "v",
+					"declared_type": "INT",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_int_pk_1",
+					"unique": true,
+					"origin": "primary_key",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "id", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["id"], "source": "sqlite_autoindex_int_pk_1", "total": false}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "loose",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "a",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "b",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_loose_1",
+					"unique": true,
+					"origin": "unique",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "a", "desc": false, "collation": "BINARY"},
+						{"name": "b", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["a", "b"], "source": "sqlite_autoindex_loose_1", "total": false}
+			],
+			"foreign_keys": [
+				{
+					"columns": ["a"],
+					"parent": "serial_pk",
+					"parent_exists": true,
+					"parent_columns": [],
+					"resolved_parent_columns": ["serial"],
+					"on_update": "NO ACTION",
+					"on_delete": "NO ACTION",
+					"indexed": true
+				},
+				{
+					"columns": ["b"],
+					"parent": "alias_pk",
+					"parent_exists": true,
+					"parent_columns": [],
+					"resolved_parent_columns": ["id"],
+					"on_update": "NO ACTION",
+					"on_delete": "NO ACTION",
+					"indexed": false
+				}
+			],
+			"triggers": []
+		},
+		{
+			"name": "pair",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": true,
+			"columns": [
+				{
+					"name": "a",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "b",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 2,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_pair_1",
+					"unique": true,
+					"origin": "primary_key",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "a", "desc": false, "collation": "BINARY"},
+						{"name": "b", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["a", "b"], "source": "sqlite_autoindex_pair_1", "total": true}
+			],
+			"foreign_keys": [
+				{
+					"columns": ["a"],
+					"parent": "serial_pk",
+					"parent_exists": true,
+					"parent_columns": [],
+					"resolved_parent_columns": ["serial"],
+					"on_update": "NO ACTION",
+					"on_delete": "NO ACTION",
+					"indexed": true
+				},
+				{
+					"columns": ["b"],
+					"parent": "alias_pk",
+					"parent_exists": true,
+					"parent_columns": ["id"],
+					"resolved_parent_columns": ["id"],
+					"on_update": "NO ACTION",
+					"on_delete": "NO ACTION",
+					"indexed": false
+				}
+			],
+			"triggers": []
+		},
+		{
+			"name": "serial_pk",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": true,
+			"rowid_alias": "serial",
+			"junction": false,
+			"columns": [
+				{
+					"name": "serial",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": true,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "created_at",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["serial"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "sqlitedata",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "st",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": true,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "k",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "a",
+					"declared_type": "ANY",
+					"affinity": "any",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "r",
+					"declared_type": "REAL",
+					"affinity": "real",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": "1.5",
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_st_1",
+					"unique": true,
+					"origin": "unique",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "k", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true},
+				{"columns": ["k"], "source": "sqlite_autoindex_st_1", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "sys_state",
+			"kind": "table",
+			"created": {"script": "sys.sql", "patch": null, "system": true},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "created_at",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "text_pk",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "k",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "v",
+					"declared_type": "BLOB",
+					"affinity": "blob",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_text_pk_1",
+					"unique": true,
+					"origin": "primary_key",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "k", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["k"], "source": "sqlite_autoindex_text_pk_1", "total": false}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "v_pair",
+			"kind": "view",
+			"created": {"script": "sql/1.0.0/view.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "a",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": null,
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false,
+					"origin": {"table": "pair", "column": "a"}
+				},
+				{
+					"name": "made",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": null,
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false,
+					"origin": {"table": "serial_pk", "column": "created_at"}
+				},
+				{
+					"name": "next",
+					"declared_type": "",
+					"affinity": "blob",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": null,
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false,
+					"origin": {"table": null, "column": null}
+				}
+			],
+			"indexes": [],
+			"unique_keys": [],
+			"foreign_keys": [],
+			"triggers": []
+		},
+		{
+			"name": "wr",
+			"kind": "table",
+			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"without_rowid": true,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": null,
+			"junction": false,
+			"columns": [
+				{
+					"name": "k",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "n",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				},
+				{
+					"name": "v",
+					"declared_type": "",
+					"affinity": "blob",
+					"notnull": false,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_wr_1",
+					"unique": true,
+					"origin": "primary_key",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "k", "desc": false, "collation": "BINARY"}
+					],
+					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+				}
+			],
+			"unique_keys": [
+				{"columns": ["k"], "source": "sqlite_autoindex_wr_1", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		}
+	]
+}
