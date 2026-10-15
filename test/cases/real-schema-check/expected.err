@@ -1,0 +1,5 @@
+../real-schema/sql/0.2.0/chapter.sql:1:1: warning: chapter(scan_group) references scan_group, but no index of chapter starts with (scan_group); deleting from scan_group scans chapter [fk_indexed]
+../real-schema/sql/0.1.0/sessions.sql:1:1: warning: sessions(user) references users, but no index of sessions starts with (user); deleting from users scans sessions [fk_indexed]
+../real-schema/sql/0.2.0/source_manga_artist.sql:1:1: warning: source_manga_artist(person) references person, but no index of source_manga_artist starts with (person); deleting from person scans source_manga_artist [fk_indexed]
+../real-schema/sql/0.2.0/source_manga_author.sql:1:1: warning: source_manga_author(person) references person, but no index of source_manga_author starts with (person); deleting from person scans source_manga_author [fk_indexed]
+../real-schema/sql/0.2.0/source_manga_tag.sql:1:1: warning: source_manga_tag(tag_source) references tag_source, but no index of source_manga_tag starts with (tag_source); deleting from tag_source scans source_manga_tag [fk_indexed]

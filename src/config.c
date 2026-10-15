@@ -114,23 +114,30 @@ static void problem(reader *r, const char *fullkey, const char *fmt, const char 
 	free(path);
 }
 
-/* Every rule sqlgen knows and its default level. Rules about SQLite's own semantics are on;
- * rules about one project's conventions are off until that project's file switches them on. */
+enum { MAX_PARAMS = 3 };
+
+/* Every rule sqlgen knows, its default level, and its parameters with their defaults; a parameter
+ * whose default is NULL is required while the rule is on. Rules about SQLite's own semantics are
+ * on; rules about one project's conventions are off until that project's file switches them on. */
 static const struct {
 	const char *name;
 	sg_level    level;
+	struct {
+		const char *name;
+		const char *fallback;
+	} params[MAX_PARAMS + 1];
 } RULES[] = {
-	{ "fk_target",                   SG_LEVEL_ERROR },
-	{ "fk_indexed",                  SG_LEVEL_WARN },
-	{ "nullable_unique",             SG_LEVEL_WARN },
-	{ "strict",                      SG_LEVEL_OFF },
-	{ "pk_shape",                    SG_LEVEL_OFF },
-	{ "pk_naming",                   SG_LEVEL_OFF },
-	{ "created_at",                  SG_LEVEL_OFF },
-	{ "updated_at_needs_created_at", SG_LEVEL_OFF },
-	{ "stamp_type",                  SG_LEVEL_OFF },
-	{ "prefix_origin",               SG_LEVEL_OFF },
-	{ NULL, SG_LEVEL_OFF }
+	{ "fk_target",                   SG_LEVEL_ERROR, { { NULL, NULL } } },
+	{ "fk_indexed",                  SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "nullable_unique",             SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "strict",                      SG_LEVEL_OFF,   { { NULL, NULL } } },
+	{ "pk_shape",                    SG_LEVEL_OFF,   { { NULL, NULL } } },
+	{ "pk_naming",                   SG_LEVEL_OFF,   { { "autoincrement", "serial" }, { "plain", "id" }, { NULL, NULL } } },
+	{ "created_at",                  SG_LEVEL_OFF,   { { "column", "created_at" }, { NULL, NULL } } },
+	{ "updated_at_needs_created_at", SG_LEVEL_OFF,   { { "updated", "updated_at" }, { "created", "created_at" }, { NULL, NULL } } },
+	{ "stamp_type",                  SG_LEVEL_OFF,   { { "pattern", "*_at" }, { NULL, NULL } } },
+	{ "prefix_origin",               SG_LEVEL_OFF,   { { "prefix", NULL }, { NULL, NULL } } },
+	{ NULL, SG_LEVEL_OFF, { { NULL, NULL } } }
 };
 
 /* The defaults of every other key, used both when a key is absent and in the written file. */
@@ -168,11 +175,11 @@ static const char DEFAULT_TEXT[] =
 	"\t\t\"nullable_unique\": \"warn\",\n"
 	"\t\t\"strict\": \"off\",\n"
 	"\t\t\"pk_shape\": \"off\",\n"
-	"\t\t\"pk_naming\": \"off\",\n"
-	"\t\t\"created_at\": \"off\",\n"
-	"\t\t\"updated_at_needs_created_at\": \"off\",\n"
-	"\t\t\"stamp_type\": \"off\",\n"
-	"\t\t\"prefix_origin\": \"off\"\n"
+	"\t\t\"pk_naming\": { \"level\": \"off\", \"autoincrement\": \"serial\", \"plain\": \"id\" },\n"
+	"\t\t\"created_at\": { \"level\": \"off\", \"column\": \"created_at\" },\n"
+	"\t\t\"updated_at_needs_created_at\": { \"level\": \"off\", \"updated\": \"updated_at\", \"created\": \"created_at\" },\n"
+	"\t\t\"stamp_type\": { \"level\": \"off\", \"pattern\": \"*_at\" },\n"
+	"\t\t\"prefix_origin\": { \"level\": \"off\", \"prefix\": null }\n"
 	"\t},\n"
 	"\t\"queries\": []\n"
 	"}\n";
@@ -474,11 +481,75 @@ static void default_rules(sg_config *config) {
 
 		rule->name  = RULES[i].name;
 		rule->level = RULES[i].level;
+
+		for (size_t p = 0; RULES[i].params[p].name; ++p) {
+			sg_pair *param = SG_PUSH(rule->params);
+
+			param->key   = sg_xstrdup(RULES[i].params[p].name);
+			param->value = sg_xstrdup(RULES[i].params[p].fallback);
+		}
 	}
 }
 
-/* Rule names and levels are checked here; a rule's parameters are kept, unchecked, as JSON in
- * sg_rule_config::params. */
+/* The members of a rule's object other than "level": each must be one of its parameters, holding a
+ * string or null. */
+static bool read_params(reader *r, const char *fullkey, sg_rule_config *rule) {
+	sqlite3_stmt *stmt = prepare(r, "select key, fullkey, type, value from json_each(?1, ?2)", fullkey);
+	bool          ok   = stmt != NULL;
+
+	while (stmt && sqlite3_step(stmt) == SQLITE_ROW) {
+		const char *key   = (const char *)sqlite3_column_text(stmt, 0);
+		const char *path  = (const char *)sqlite3_column_text(stmt, 1);
+		const char *type  = (const char *)sqlite3_column_text(stmt, 2);
+		sg_pair    *param = NULL;
+
+		if (strcmp(key, "level") == 0) {
+			continue;
+		}
+
+		for (size_t i = 0; i < rule->params.count && !param; ++i) {
+			if (strcmp(rule->params.items[i].key, key) == 0) {
+				param = &rule->params.items[i];
+			}
+		}
+
+		if (!param) {
+			problem(r, path, rule->params.count ? ": unknown parameter" : ": unknown parameter;"
+					" this rule takes none", NULL, NULL);
+			ok = false;
+		} else if (strcmp(type, "text") != 0 && strcmp(type, "null") != 0) {
+			problem(r, path, " must be a string or null, not %s", type, NULL);
+			ok = false;
+		} else {
+			free(param->value);
+			param->value = sg_xstrdup((const char *)sqlite3_column_text(stmt, 3));
+		}
+	}
+
+	sqlite3_finalize(stmt);
+	return ok;
+}
+
+/* A parameter without a default must be set while its rule is on. */
+static bool check_required(reader *r, const sg_config *config) {
+	bool ok = true;
+
+	for (size_t i = 0; i < config->rules.count; ++i) {
+		const sg_rule_config *rule = &config->rules.items[i];
+
+		for (size_t p = 0; rule->level != SG_LEVEL_OFF && p < rule->params.count; ++p) {
+			if (!rule->params.items[p].value) {
+				sg_error(r->file, 0, 0, "$.rules.%s.%s is required while the rule is on", rule->name,
+						rule->params.items[p].key);
+				ok = false;
+			}
+		}
+	}
+
+	return ok;
+}
+
+/* Rule names, levels and parameters. */
 static bool read_rules(reader *r, sg_config *config) {
 	sqlite3_stmt *stmt = prepare(r, "select key, fullkey, type, value from json_each(?1, ?2)",
 			"$.rules");
@@ -512,6 +583,7 @@ static bool read_rules(reader *r, sg_config *config) {
 
 			level = text_at(r, path);
 			free(path);
+			ok = read_params(r, fullkey, rule) && ok;
 		} else {
 			problem(r, fullkey, " must be a level or an object, not %s", type, NULL);
 			ok = false;
@@ -526,9 +598,7 @@ static bool read_rules(reader *r, sg_config *config) {
 		}
 
 		free(level);
-		free(rule->params);
-		rule->level  = parsed;
-		rule->params = strcmp(type, "object") == 0 ? sg_xstrdup(value) : NULL;
+		rule->level = parsed;
 	}
 
 	sqlite3_finalize(stmt);
@@ -661,42 +731,36 @@ static bool read_values(reader *r, sg_config *config) {
 		ok = read_rules(r, config) && ok;
 	}
 
+	ok = check_required(r, config) && ok;
+
 	free(tables);
 	free(rules);
 	push_texts(r, "$.queries", config->dir, &config->queries);
 	return ok;
 }
 
-bool sg_config_load(const char *path, sg_config *out) {
-	char   *text = NULL;
-	size_t  len  = 0;
-	reader  r    = {0};
-	bool    ok   = false;
+bool sg_config_load_text(const char *name, const char *text, size_t len, sg_config *out) {
+	reader r  = {0};
+	bool   ok = false;
 
 	memset(out, 0, sizeof *out);
-	out->path = sg_xstrdup(path);
-	out->dir  = sg_dirname(path);
-
-	if (!sg_read_file(path, &text, &len)) {
-		return false;
-	}
+	out->path = sg_xstrdup(name);
+	out->dir  = sg_dirname(name);
 
 	if (len > INT_MAX) {
-		sg_error(path, 0, 0, "is too large");
-		free(text);
+		sg_error(name, 0, 0, "is too large");
 		return false;
 	}
 
 	if (sqlite3_open_v2(":memory:", &r.db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
 		sg_error(NULL, 0, 0, "a scratch database could not be opened");
 		sqlite3_close(r.db);
-		free(text);
 		return false;
 	}
 
 	r.text = text;
 	r.len  = (int)len;
-	r.file = path;
+	r.file = name;
 
 	if (syntax_ok(&r, len)) {
 		bool valid = validate(&r);
@@ -705,6 +769,20 @@ bool sg_config_load(const char *path, sg_config *out) {
 	}
 
 	sqlite3_close(r.db);
+	return ok;
+}
+
+bool sg_config_load(const char *path, sg_config *out) {
+	char   *text = NULL;
+	size_t  len  = 0;
+
+	if (!sg_read_file(path, &text, &len)) {
+		memset(out, 0, sizeof *out);
+		return false;
+	}
+
+	bool ok = sg_config_load_text(path, text, len, out);
+
 	free(text);
 	return ok;
 }
@@ -743,7 +821,14 @@ void sg_config_free(sg_config *config) {
 	free(config->tables.items);
 
 	for (size_t i = 0; i < config->rules.count; ++i) {
-		free(config->rules.items[i].params);
+		sg_rule_config *rule = &config->rules.items[i];
+
+		for (size_t p = 0; p < rule->params.count; ++p) {
+			free(rule->params.items[p].key);
+			free(rule->params.items[p].value);
+		}
+
+		free(rule->params.items);
 	}
 
 	free(config->rules.items);
@@ -785,6 +870,16 @@ const sg_rule_config *sg_config_rule(const sg_config *config, const char *name) 
 	for (size_t i = 0; i < config->rules.count; ++i) {
 		if (strcmp(config->rules.items[i].name, name) == 0) {
 			return &config->rules.items[i];
+		}
+	}
+
+	return NULL;
+}
+
+const char *sg_rule_param(const sg_rule_config *rule, const char *name) {
+	for (size_t i = 0; i < rule->params.count; ++i) {
+		if (strcmp(rule->params.items[i].key, name) == 0) {
+			return rule->params.items[i].value;
 		}
 	}
 

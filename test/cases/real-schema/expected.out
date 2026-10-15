@@ -20,7 +20,7 @@
 		{
 			"name": "chapter",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/chapter.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/chapter.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -234,7 +234,7 @@
 						{"name": "source_manga", "desc": false, "collation": "BINARY"},
 						{"name": "language", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/chapter.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/chapter.sql", "line": 31, "patch": "0.2.0", "system": false}
 				},
 				{
 					"name": "sqlite_autoindex_chapter_1",
@@ -246,7 +246,7 @@
 						{"name": "source_manga", "desc": false, "collation": "BINARY"},
 						{"name": "upstream_id", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/chapter.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/chapter.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -280,7 +280,7 @@
 		{
 			"name": "linked_accounts",
 			"kind": "table",
-			"created": {"script": "sql/0.1.0/linked_accounts.sql", "patch": "0.1.0", "system": false},
+			"created": {"script": "sql/0.1.0/linked_accounts.sql", "line": 1, "patch": "0.1.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -434,7 +434,7 @@
 						{"name": "user", "desc": false, "collation": "BINARY"},
 						{"name": "source", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.1.0/linked_accounts.sql", "patch": "0.1.0", "system": false}
+					"created": {"script": "sql/0.1.0/linked_accounts.sql", "line": 1, "patch": "0.1.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -458,7 +458,7 @@
 		{
 			"name": "manga",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/manga.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/manga.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -521,7 +521,7 @@
 					"columns": [
 						{"name": "slug", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/manga.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/manga.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -534,7 +534,7 @@
 		{
 			"name": "manga_interest",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/manga_interest.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/manga_interest.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -628,7 +628,7 @@
 						{"name": "updated_at", "desc": false, "collation": "BINARY"},
 						{"name": "created_at", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/manga_interest.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/manga_interest.sql", "line": 16, "patch": "0.2.0", "system": false}
 				},
 				{
 					"name": "sqlite_autoindex_manga_interest_1",
@@ -639,7 +639,7 @@
 					"columns": [
 						{"name": "manga", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/manga_interest.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/manga_interest.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -663,7 +663,7 @@
 		{
 			"name": "person",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/person.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/person.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -772,7 +772,7 @@
 						{"name": "source", "desc": false, "collation": "BINARY"},
 						{"name": "upstream_id", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/person.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/person.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -785,7 +785,7 @@
 		{
 			"name": "scan_group",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/scan_group.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/scan_group.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -894,7 +894,7 @@
 						{"name": "source", "desc": false, "collation": "BINARY"},
 						{"name": "upstream_id", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/scan_group.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/scan_group.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -907,7 +907,7 @@
 		{
 			"name": "sessions",
 			"kind": "table",
-			"created": {"script": "sql/0.1.0/sessions.sql", "patch": "0.1.0", "system": false},
+			"created": {"script": "sql/0.1.0/sessions.sql", "line": 1, "patch": "0.1.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -1030,7 +1030,7 @@
 					"columns": [
 						{"name": "family", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.1.0/sessions.sql", "patch": "0.1.0", "system": false}
+					"created": {"script": "sql/0.1.0/sessions.sql", "line": 20, "patch": "0.1.0", "system": false}
 				},
 				{
 					"name": "sqlite_autoindex_sessions_1",
@@ -1041,7 +1041,7 @@
 					"columns": [
 						{"name": "token_hash", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.1.0/sessions.sql", "patch": "0.1.0", "system": false}
+					"created": {"script": "sql/0.1.0/sessions.sql", "line": 1, "patch": "0.1.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1065,7 +1065,7 @@
 		{
 			"name": "source_manga",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/source_manga.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/source_manga.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -1309,7 +1309,7 @@
 						{"name": "source", "desc": false, "collation": "BINARY"},
 						{"name": "upstream_id", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/source_manga.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/source_manga.sql", "line": 1, "patch": "0.2.0", "system": false}
 				},
 				{
 					"name": "sqlite_autoindex_source_manga_2",
@@ -1321,7 +1321,7 @@
 						{"name": "manga", "desc": false, "collation": "BINARY"},
 						{"name": "source", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/source_manga.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/source_manga.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1346,7 +1346,7 @@
 		{
 			"name": "source_manga_artist",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/source_manga_artist.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/source_manga_artist.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -1395,7 +1395,7 @@
 						{"name": "source_manga", "desc": false, "collation": "BINARY"},
 						{"name": "person", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/source_manga_artist.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/source_manga_artist.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1428,7 +1428,7 @@
 		{
 			"name": "source_manga_author",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/source_manga_author.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/source_manga_author.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -1477,7 +1477,7 @@
 						{"name": "source_manga", "desc": false, "collation": "BINARY"},
 						{"name": "person", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/source_manga_author.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/source_manga_author.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1510,7 +1510,7 @@
 		{
 			"name": "source_manga_tag",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/source_manga_tag.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/source_manga_tag.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -1559,7 +1559,7 @@
 						{"name": "source_manga", "desc": false, "collation": "BINARY"},
 						{"name": "tag_source", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/source_manga_tag.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/source_manga_tag.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1592,7 +1592,7 @@
 		{
 			"name": "stats_history",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/stats_history.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/stats_history.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -1686,7 +1686,7 @@
 						{"name": "source_manga", "desc": false, "collation": "BINARY"},
 						{"name": "created_at", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/stats_history.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/stats_history.sql", "line": 16, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1709,7 +1709,7 @@
 		{
 			"name": "sys_instance",
 			"kind": "table",
-			"created": {"script": "sql/system.sql", "patch": null, "system": true},
+			"created": {"script": "sql/system.sql", "line": 28, "patch": null, "system": true},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -1772,7 +1772,7 @@
 		{
 			"name": "sys_schema_patch",
 			"kind": "table",
-			"created": {"script": "sql/system.sql", "patch": null, "system": true},
+			"created": {"script": "sql/system.sql", "line": 1, "patch": null, "system": true},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -1913,7 +1913,7 @@
 						{"name": "patch", "desc": false, "collation": "BINARY"},
 						{"name": "prerelease", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/system.sql", "patch": null, "system": true}
+					"created": {"script": "sql/system.sql", "line": 1, "patch": null, "system": true}
 				}
 			],
 			"unique_keys": [
@@ -1926,7 +1926,7 @@
 		{
 			"name": "sys_schema_script",
 			"kind": "table",
-			"created": {"script": "sql/system.sql", "patch": null, "system": true},
+			"created": {"script": "sql/system.sql", "line": 15, "patch": null, "system": true},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -2035,7 +2035,7 @@
 						{"name": "patch", "desc": false, "collation": "BINARY"},
 						{"name": "ordinal", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/system.sql", "patch": null, "system": true}
+					"created": {"script": "sql/system.sql", "line": 15, "patch": null, "system": true}
 				}
 			],
 			"unique_keys": [
@@ -2059,7 +2059,7 @@
 		{
 			"name": "tag_canonical",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/tag_canonical.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/tag_canonical.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -2152,7 +2152,7 @@
 					"columns": [
 						{"name": "slug", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/tag_canonical.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/tag_canonical.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -2165,7 +2165,7 @@
 		{
 			"name": "tag_source",
 			"kind": "table",
-			"created": {"script": "sql/0.2.0/tag_source.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "sql/0.2.0/tag_source.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -2288,7 +2288,7 @@
 					"columns": [
 						{"name": "canonical", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/tag_source.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/tag_source.sql", "line": 20, "patch": "0.2.0", "system": false}
 				},
 				{
 					"name": "sqlite_autoindex_tag_source_1",
@@ -2300,7 +2300,7 @@
 						{"name": "source", "desc": false, "collation": "BINARY"},
 						{"name": "upstream_id", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.2.0/tag_source.sql", "patch": "0.2.0", "system": false}
+					"created": {"script": "sql/0.2.0/tag_source.sql", "line": 1, "patch": "0.2.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -2324,7 +2324,7 @@
 		{
 			"name": "users",
 			"kind": "table",
-			"created": {"script": "sql/0.1.0/users.sql", "patch": "0.1.0", "system": false},
+			"created": {"script": "sql/0.1.0/users.sql", "line": 1, "patch": "0.1.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -2462,7 +2462,7 @@
 					"columns": [
 						{"name": "username", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.1.0/users.sql", "patch": "0.1.0", "system": false}
+					"created": {"script": "sql/0.1.0/users.sql", "line": 1, "patch": "0.1.0", "system": false}
 				},
 				{
 					"name": "sqlite_autoindex_users_2",
@@ -2473,7 +2473,7 @@
 					"columns": [
 						{"name": "email", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/0.1.0/users.sql", "patch": "0.1.0", "system": false}
+					"created": {"script": "sql/0.1.0/users.sql", "line": 1, "patch": "0.1.0", "system": false}
 				}
 			],
 			"unique_keys": [

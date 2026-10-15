@@ -15,7 +15,7 @@
 		{
 			"name": "alias_pk",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 2, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -78,7 +78,7 @@
 		{
 			"name": "composite_child",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 30, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -152,7 +152,7 @@
 		{
 			"name": "composite_parent",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 29, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -216,7 +216,7 @@
 						{"name": "x", "desc": false, "collation": "BINARY"},
 						{"name": "y", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 29, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -228,7 +228,7 @@
 		{
 			"name": "dangling",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 43, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -287,7 +287,7 @@
 		{
 			"name": "desc_pk",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 6, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -335,7 +335,7 @@
 					"columns": [
 						{"name": "id", "desc": true, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 6, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -347,7 +347,7 @@
 		{
 			"name": "gen",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 22, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -425,7 +425,7 @@
 		{
 			"name": "idx",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 38, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -519,7 +519,7 @@
 						{"name": "created_at", "desc": true, "collation": "BINARY"},
 						{"name": "order", "desc": false, "collation": "nocase"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 41, "patch": "1.0.0", "system": false}
 				},
 				{
 					"name": "ux_idx_lower",
@@ -530,7 +530,7 @@
 					"columns": [
 						{"name": null, "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 39, "patch": "1.0.0", "system": false}
 				},
 				{
 					"name": "ux_idx_partial",
@@ -541,7 +541,7 @@
 					"columns": [
 						{"name": "with space", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 40, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -553,7 +553,7 @@
 		{
 			"name": "int_pk",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 7, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -601,7 +601,7 @@
 					"columns": [
 						{"name": "id", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 7, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -613,7 +613,7 @@
 		{
 			"name": "loose",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 20, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -662,7 +662,7 @@
 						{"name": "a", "desc": false, "collation": "BINARY"},
 						{"name": "b", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 20, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -695,7 +695,7 @@
 		{
 			"name": "pair",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 13, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -744,7 +744,7 @@
 						{"name": "a", "desc": false, "collation": "BINARY"},
 						{"name": "b", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 13, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -777,7 +777,7 @@
 		{
 			"name": "serial_pk",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 3, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": true,
@@ -825,7 +825,7 @@
 		{
 			"name": "sqlitedata",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 46, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -858,7 +858,7 @@
 		{
 			"name": "st",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 10, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": true,
 			"autoincrement": false,
@@ -936,7 +936,7 @@
 					"columns": [
 						{"name": "k", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 10, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -949,7 +949,7 @@
 		{
 			"name": "sys_state",
 			"kind": "table",
-			"created": {"script": "sys.sql", "patch": null, "system": true},
+			"created": {"script": "sys.sql", "line": 1, "patch": null, "system": true},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -997,7 +997,7 @@
 		{
 			"name": "text_pk",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 8, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -1045,7 +1045,7 @@
 					"columns": [
 						{"name": "k", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 8, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [
@@ -1057,7 +1057,7 @@
 		{
 			"name": "v_pair",
 			"kind": "view",
-			"created": {"script": "sql/1.0.0/view.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/view.sql", "line": 1, "patch": "1.0.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -1121,7 +1121,7 @@
 		{
 			"name": "wr",
 			"kind": "table",
-			"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false},
+			"created": {"script": "sql/1.0.0/edge.sql", "line": 9, "patch": "1.0.0", "system": false},
 			"without_rowid": true,
 			"strict": false,
 			"autoincrement": false,
@@ -1184,7 +1184,7 @@
 					"columns": [
 						{"name": "k", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "sql/1.0.0/edge.sql", "patch": "1.0.0", "system": false}
+					"created": {"script": "sql/1.0.0/edge.sql", "line": 9, "patch": "1.0.0", "system": false}
 				}
 			],
 			"unique_keys": [

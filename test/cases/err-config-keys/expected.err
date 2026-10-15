@@ -9,4 +9,5 @@ sqlgen.json: error: $.tables.users.writes[1]: unknown write 'replace'; expected 
 sqlgen.json: error: $.tables.x.write: unknown key
 sqlgen.json: error: $.tables.y must be an object, not array
 sqlgen.json: error: $.rules.created_at: level must be "error", "warn" or "off"
+sqlgen.json: error: $.rules.pk_naming.names: unknown parameter
 sqlgen.json: error: $.rules.z: unknown rule

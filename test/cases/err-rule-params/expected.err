@@ -1,0 +1,4 @@
+sqlgen.json: error: $.rules.pk_naming.serial: unknown parameter
+sqlgen.json: error: $.rules.created_at.column must be a string or null, not integer
+sqlgen.json: error: $.rules.strict.tables: unknown parameter; this rule takes none
+sqlgen.json: error: $.rules.prefix_origin.prefix is required while the rule is on

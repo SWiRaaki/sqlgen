@@ -42,6 +42,8 @@ typedef struct {
 	const char *script;   //!< The script path; borrowed from the patch set.
 	const char *patch;    //!< The patch version text; NULL for the system-tables script.
 	bool        system;   //!< Created by the system-tables script.
+	unsigned    line;     //!< 1-based line of the statement that created it.
+	unsigned    col;      //!< 1-based byte column of that statement.
 } sg_origin;
 
 typedef struct {

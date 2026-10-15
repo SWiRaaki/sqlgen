@@ -1,0 +1,5 @@
+../rules/sql/1.0.0/rules.sql:10:1: error: bad_target(code) references parent(code), which is neither its primary key nor a unique key; SQLite refuses writes to bad_target with "foreign key mismatch" [fk_target]
+../rules/sql/1.0.0/rules.sql:20:1: warning: link(b) references parent, but no index of link starts with (b); deleting from parent scans link [fk_indexed]
+../rules/sql/1.0.0/rules.sql:26:1: warning: unique key loose(email) holds nullable email; SQLite treats NULLs as distinct, so any number of rows may share it [nullable_unique]
+../rules/sql/1.0.0/rules.sql:17:1: error: orphan(other) references nowhere, which does not exist [fk_target]
+sqlgen: 2 errors and 2 warnings

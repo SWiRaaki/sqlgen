@@ -1,0 +1,2 @@
+sqlgen.json: error: $.tables.sys_metta names no table in the schema
+sqlgen: 1 error

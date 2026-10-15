@@ -134,6 +134,7 @@ static void origin(writer *w, const char *key, const sg_origin *created) {
 
 	open_(w, key, '{', true);
 	text(w, "script", created->script);
+	integer(w, "line", created->line);
 	text(w, "patch", created->patch);
 	boolean(w, "system", created->system);
 	close_(w, '}');

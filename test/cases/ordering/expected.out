@@ -25,7 +25,7 @@
 		{
 			"name": "gone",
 			"kind": "table",
-			"created": {"script": "patches/a/ten.sql", "patch": "0.10.0", "system": false},
+			"created": {"script": "patches/a/ten.sql", "line": 3, "patch": "0.10.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -73,7 +73,7 @@
 		{
 			"name": "two",
 			"kind": "table",
-			"created": {"script": "patches/b/two.sql", "patch": "0.2.0", "system": false},
+			"created": {"script": "patches/b/two.sql", "line": 1, "patch": "0.2.0", "system": false},
 			"without_rowid": false,
 			"strict": false,
 			"autoincrement": false,
@@ -151,7 +151,7 @@
 					"columns": [
 						{"name": "x", "desc": false, "collation": "BINARY"}
 					],
-					"created": {"script": "patches/c/rc.sql", "patch": "0.10.0-rc.1", "system": false}
+					"created": {"script": "patches/c/rc.sql", "line": 1, "patch": "0.10.0-rc.1", "system": false}
 				}
 			],
 			"unique_keys": [

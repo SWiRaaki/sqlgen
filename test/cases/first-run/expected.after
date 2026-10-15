@@ -22,11 +22,11 @@
 		"nullable_unique": "warn",
 		"strict": "off",
 		"pk_shape": "off",
-		"pk_naming": "off",
-		"created_at": "off",
-		"updated_at_needs_created_at": "off",
-		"stamp_type": "off",
-		"prefix_origin": "off"
+		"pk_naming": { "level": "off", "autoincrement": "serial", "plain": "id" },
+		"created_at": { "level": "off", "column": "created_at" },
+		"updated_at_needs_created_at": { "level": "off", "updated": "updated_at", "created": "created_at" },
+		"stamp_type": { "level": "off", "pattern": "*_at" },
+		"prefix_origin": { "level": "off", "prefix": null }
 	},
 	"queries": []
 }

@@ -60,6 +60,17 @@ static void defaults_agree(void) {
 		expect(strcmp(written.rules.items[i].name, empty.rules.items[i].name) == 0
 				&& written.rules.items[i].level == empty.rules.items[i].level,
 				"a rule's written level differs from its default");
+
+		const sg_rule_config *w = &written.rules.items[i];
+		const sg_rule_config *e = &empty.rules.items[i];
+
+		expect(w->params.count == e->params.count, "a rule's written parameters differ from its defaults");
+
+		for (size_t p = 0; p < w->params.count && p < e->params.count; ++p) {
+			expect(strcmp(w->params.items[p].key, e->params.items[p].key) == 0
+					&& same(w->params.items[p].value, e->params.items[p].value),
+					"a rule's written parameter differs from its default");
+		}
 	}
 
 	/* The default values themselves, so changing one has to change this test as well. */
@@ -115,7 +126,7 @@ static void rules_start_from_defaults(void) {
 	sg_config config;
 
 	if (!load("rules.json", "{ \"rules\": { \"fk_indexed\": \"error\","
-			" \"pk_naming\": { \"level\": \"warn\", \"names\": [\"id\"] } } }", &config)) {
+			" \"pk_naming\": { \"level\": \"warn\", \"plain\": \"key\" } } }", &config)) {
 		expect(0, "the rules example does not load");
 		return;
 	}
@@ -124,9 +135,11 @@ static void rules_start_from_defaults(void) {
 	const sg_rule_config *naming  = sg_config_rule(&config, "pk_naming");
 	const sg_rule_config *target  = sg_config_rule(&config, "fk_target");
 
-	expect(indexed->level == SG_LEVEL_ERROR && !indexed->params, "a level string was not applied");
-	expect(naming->level == SG_LEVEL_WARN && naming->params && strstr(naming->params, "names"),
-			"a rule object lost its level or parameters");
+	expect(indexed->level == SG_LEVEL_ERROR && indexed->params.count == 0, "a level string was not applied");
+	expect(naming->level == SG_LEVEL_WARN, "a rule object lost its level");
+	expect(strcmp(sg_rule_param(naming, "plain"), "key") == 0, "a parameter given was not applied");
+	expect(strcmp(sg_rule_param(naming, "autoincrement"), "serial") == 0, "a parameter left out lost its default");
+	expect(!sg_rule_param(sg_config_rule(&config, "prefix_origin"), "prefix"), "prefix_origin.prefix has a default");
 	expect(target->level == SG_LEVEL_ERROR, "an unmentioned rule lost its default");
 	expect(!sg_config_rule(&config, "no_such_rule"), "an unknown rule was found");
 

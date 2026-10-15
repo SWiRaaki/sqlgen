@@ -14,7 +14,7 @@ BUILD    ?= release
 CIPHER   ?= 0
 SUFFIX   :=
 
-SRC      := src/util.c src/semver.c src/json.c src/config.c src/schema.c src/introspect.c src/model_json.c src/main.c
+SRC      := src/util.c src/semver.c src/json.c src/config.c src/schema.c src/introspect.c src/rules.c src/model_json.c src/main.c
 HDR      := $(wildcard include/*.h)
 
 CSTD     := -std=c99

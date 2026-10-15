@@ -1,0 +1,129 @@
+{
+	"format": 1,
+	"sqlite": "3.51.2",
+	"source": {
+		"database": "test.db"
+	},
+	"tables": [
+		{
+			"name": "child",
+			"kind": "table",
+			"created": null,
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "parent",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true}
+			],
+			"foreign_keys": [
+				{
+					"columns": ["parent"],
+					"parent": "parent",
+					"parent_exists": true,
+					"parent_columns": ["id"],
+					"resolved_parent_columns": ["id"],
+					"on_update": "NO ACTION",
+					"on_delete": "NO ACTION",
+					"indexed": false
+				}
+			],
+			"triggers": []
+		},
+		{
+			"name": "parent",
+			"kind": "table",
+			"created": null,
+			"without_rowid": false,
+			"strict": false,
+			"autoincrement": false,
+			"rowid_alias": "id",
+			"junction": false,
+			"columns": [
+				{
+					"name": "id",
+					"declared_type": "INTEGER",
+					"affinity": "integer",
+					"notnull": true,
+					"notnull_declared": false,
+					"default": null,
+					"primary_key": 1,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": true,
+					"needs_quote": false
+				},
+				{
+					"name": "name",
+					"declared_type": "TEXT",
+					"affinity": "text",
+					"notnull": true,
+					"notnull_declared": true,
+					"default": null,
+					"primary_key": 0,
+					"generated": null,
+					"hidden": false,
+					"collation": "BINARY",
+					"autoincrement": false,
+					"rowid_alias": false,
+					"needs_quote": false
+				}
+			],
+			"indexes": [
+				{
+					"name": "sqlite_autoindex_parent_1",
+					"unique": true,
+					"origin": "unique",
+					"partial": false,
+					"expression": false,
+					"columns": [
+						{"name": "name", "desc": false, "collation": "BINARY"}
+					],
+					"created": null
+				}
+			],
+			"unique_keys": [
+				{"columns": ["id"], "source": "rowid", "total": true},
+				{"columns": ["name"], "source": "sqlite_autoindex_parent_1", "total": true}
+			],
+			"foreign_keys": [],
+			"triggers": []
+		}
+	]
+}

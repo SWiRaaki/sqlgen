@@ -65,11 +65,18 @@ typedef enum {
 	SG_LEVEL_ERROR
 } sg_level;
 
-/** @brief One rule, with its level after the defaults and the file are applied. */
+/**
+ * @brief One rule, with its level and parameters after the defaults and the file are applied.
+ *
+ * Every parameter the rule knows is present in @ref params, in the rule's own order, holding the
+ * file's value or the default. A value is NULL only for a parameter without a default that the file
+ * left unset or set to `null`; such a parameter is required, and the configuration is refused when
+ * the rule is on without it.
+ */
 typedef struct {
-	const char *name;     //!< Static: one of the names sqlgen knows.
-	sg_level    level;
-	char       *params;   //!< The rule's object as JSON when the file gave one, else NULL.
+	const char  *name;     //!< Static: one of the names sqlgen knows.
+	sg_level     level;
+	sg_pair_vec  params;
 } sg_rule_config;
 
 /**
@@ -104,6 +111,12 @@ typedef struct {
 bool sg_config_load(const char *path, sg_config *out);
 
 /**
+ * @brief Read and validate a configuration given as text.
+ * @param name Names it in messages; relative paths in it are resolved against its directory part.
+ */
+bool sg_config_load_text(const char *name, const char *text, size_t len, sg_config *out);
+
+/**
  * @brief The options in effect for @p table: the defaults, then the `"*"` entry's keys, then the
  *        keys of the entry naming @p table (ASCII case-insensitively, as SQLite names match).
  *
@@ -114,6 +127,9 @@ sg_table_options sg_config_table(const sg_config *config, const char *table);
 
 /** @brief Find a rule by name; NULL when sqlgen knows no such rule. */
 const sg_rule_config *sg_config_rule(const sg_config *config, const char *name);
+
+/** @brief A rule's parameter; NULL when it is unset or the rule has no such parameter. */
+const char *sg_rule_param(const sg_rule_config *rule, const char *name);
 
 /**
  * @brief A configuration file stating every key with its default, as strict JSON.

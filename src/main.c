@@ -6,6 +6,7 @@
 
 #include "config.h"
 #include "model.h"
+#include "rules.h"
 #include "schema.h"
 #include "util.h"
 
@@ -23,6 +24,7 @@ typedef struct {
 	const char *output;
 	const char *database;
 	const char *key;
+	bool        strict;         /* --strict: warnings are errors */
 } options;
 
 static void usage(FILE *to) {
@@ -31,8 +33,9 @@ static void usage(FILE *to) {
 			"commands:\n"
 			"  init      write a configuration with every default (sqlgen.json, or -c)\n"
 			"  model     load the schema and print its model as JSON\n"
-			"  check     load the schema and report problems; writes nothing\n"
-			"  report    print the model of an existing database as JSON\n"
+			"  check     load the schema and check it against the rules; writes nothing\n"
+			"  report    print the model of an existing database as JSON, and check it\n"
+			"            (rule levels from -c when given, else the defaults)\n"
 			"  generate  write the generated sources (not implemented)\n"
 			"\n"
 			"options:\n"
@@ -41,6 +44,7 @@ static void usage(FILE *to) {
 			"  -o, --output <file>  write to a file instead of standard output\n"
 			"      --db <file>      the database to report on\n"
 			"      --key <key>      its encryption key (needs a build with CIPHER=1)\n"
+			"      --strict         treat rule warnings as errors\n"
 			"  -h, --help           this text\n"
 			"      --version        sqlgen and SQLite versions\n", to);
 }
@@ -62,6 +66,8 @@ static bool parse(int argc, char **argv, options *out) {
 			out->database = argv[++i];
 		} else if (strcmp(arg, "--key") == 0 && value) {
 			out->key = argv[++i];
+		} else if (strcmp(arg, "--strict") == 0) {
+			out->strict = true;
 		} else if (arg[0] == '-') {
 			sg_error(NULL, 0, 0, "unknown option or missing value: %s", arg);
 			return false;
@@ -99,6 +105,21 @@ static sqlite3 *open_scratch(void) {
 	}
 
 	return db;
+}
+
+static const char *plural(size_t count, const char *one, const char *many) {
+	return count == 1 ? one : many;
+}
+
+/* After a run the rules failed: how many findings, so the end of a long list says what it adds up to. */
+static void failed(const sg_rules_result *result) {
+	fprintf(stderr, "sqlgen: %u %s", result->errors, plural(result->errors, "error", "errors"));
+
+	if (result->warnings) {
+		fprintf(stderr, " and %u %s", result->warnings, plural(result->warnings, "warning", "warnings"));
+	}
+
+	fputc('\n', stderr);
 }
 
 static int run_init(const options *opts) {
@@ -162,15 +183,32 @@ static int run_schema(const options *opts, bool print) {
 		status = emit(opts, &json) ? 0 : EXIT_INPUT;
 		sg_buf_free(&json);
 	} else {
-		size_t tables = 0;
-		size_t views  = 0;
+		sg_rules_input  input  = { db, &model, &config, NULL, opts->strict };
+		sg_rules_result result;
+		size_t          tables = 0;
+		size_t          views  = 0;
 
-		for (size_t i = 0; i < model.tables.count; ++i) {
-			model.tables.items[i].kind == SG_VIEW ? ++views : ++tables;
+		sg_rules_run(&input, &result);
+
+		if (result.errors == 0) {
+			size_t count = patches.patches.count;
+
+			for (size_t i = 0; i < model.tables.count; ++i) {
+				model.tables.items[i].kind == SG_VIEW ? ++views : ++tables;
+			}
+
+			printf("ok: %zu %s and %zu %s from %zu %s", tables, plural(tables, "table", "tables"), views,
+					plural(views, "view", "views"), count, plural(count, "patch", "patches"));
+
+			if (result.warnings) {
+				printf("; %u %s", result.warnings, plural(result.warnings, "warning", "warnings"));
+			}
+
+			putchar('\n');
+			status = 0;
+		} else {
+			failed(&result);
 		}
-
-		printf("ok: %zu tables and %zu views from %zu patches\n", tables, views, patches.patches.count);
-		status = 0;
 	}
 
 done:
@@ -182,9 +220,10 @@ done:
 }
 
 static int run_report(const options *opts) {
-	sqlite3  *db     = NULL;
-	sg_model  model  = {0};
-	int       status = EXIT_INPUT;
+	sqlite3   *db     = NULL;
+	sg_model   model  = {0};
+	sg_config  config = {0};
+	int        status = EXIT_INPUT;
 
 	if (!opts->database) {
 		sg_error(NULL, 0, 0, "report needs --db <file>");
@@ -217,16 +256,32 @@ static int run_report(const options *opts) {
 		goto done;
 	}
 
-	if (sg_introspect(db, &model)) {
-		sg_buf json = {0};
+	/* The rule levels: from -c when given, else the defaults -- a live database needs no file. */
+	if (opts->config_given ? !sg_config_load(opts->config, &config)
+			: !sg_config_load_text("(defaults)", "{}", 2, &config)) {
+		goto done;
+	}
 
+	if (sg_introspect(db, &model)) {
+		sg_rules_input  input = { db, &model, &config, opts->database, opts->strict };
+		sg_rules_result result;
+		sg_buf          json  = {0};
+
+		/* The model is printed whatever the rules find: a report writes no generated files, and the
+		 * model is what explains a finding. */
+		sg_rules_run(&input, &result);
 		sg_model_write_json(&model, NULL, opts->database, &json);
-		status = emit(opts, &json) ? 0 : EXIT_INPUT;
+		status = emit(opts, &json) && result.errors == 0 ? 0 : EXIT_INPUT;
 		sg_buf_free(&json);
+
+		if (result.errors) {
+			failed(&result);
+		}
 	}
 
 done:
 	sg_model_free(&model);
+	sg_config_free(&config);
 	sqlite3_close(db);
 	return status;
 }

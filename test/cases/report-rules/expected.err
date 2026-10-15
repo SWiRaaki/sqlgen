@@ -1,0 +1,1 @@
+test.db: warning: child(parent) references parent, but no index of child starts with (parent); deleting from parent scans child [fk_indexed]

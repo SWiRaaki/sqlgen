@@ -403,7 +403,10 @@ static bool apply_script(sqlite3 *db, const char *path, sg_patchset *set, sg_ori
 		sqlite3_finalize(stmt);
 
 		if (writes) {
-			record_origins(db, set, origin);
+			sg_origin here = origin;
+
+			sg_line_col(text, statement_start(text, at, len), &here.line, &here.col);
+			record_origins(db, set, here);
 		}
 
 		if (sqlite3_get_autocommit(db)) {
@@ -453,7 +456,7 @@ static bool run_script(sqlite3 *db, sg_patchset *set, const char *path, const ch
 		return false;
 	}
 
-	sg_origin origin = { path, patch, system };
+	sg_origin origin = { path, patch, system, 0, 0 };
 
 	if (!apply_script(db, path, set, origin)) {
 		if (!sqlite3_get_autocommit(db)) {
