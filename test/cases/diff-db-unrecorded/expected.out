@@ -1,0 +1,8 @@
+- table fresh
++ column keep.extra: text
+- index keep.ux_keep_v: unique on (v)
+- table labels
++ table logs
++ table tags
+~ column users.age: integer → text
+~ column users.nick: text not null default '' → text

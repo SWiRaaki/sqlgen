@@ -157,6 +157,12 @@ static const struct {
 	{ "stamp_type",                  SG_LEVEL_OFF,   { { "pattern", "*_at" }, { NULL, NULL } } },
 	{ "prefix_origin",               SG_LEVEL_OFF,   { { "prefix", NULL }, { NULL, NULL } } },
 	{ "query_scan",                  SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "drop_table",                  SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "drop_column",                 SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "column_type",                 SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "not_null_added",              SG_LEVEL_WARN,  { { NULL, NULL } } },
+	{ "unique_added",                SG_LEVEL_OFF,   { { NULL, NULL } } },
+	{ "rename",                      SG_LEVEL_OFF,   { { NULL, NULL } } },
 	{ NULL, SG_LEVEL_OFF, { { NULL, NULL } } }
 };
 
@@ -210,7 +216,13 @@ static const char DEFAULT_TEXT[] =
 	"\t\t\"updated_at_needs_created_at\": { \"level\": \"off\", \"updated\": \"updated_at\", \"created\": \"created_at\" },\n"
 	"\t\t\"stamp_type\": { \"level\": \"off\", \"pattern\": \"*_at\" },\n"
 	"\t\t\"prefix_origin\": { \"level\": \"off\", \"prefix\": null },\n"
-	"\t\t\"query_scan\": \"warn\"\n"
+	"\t\t\"query_scan\": \"warn\",\n"
+	"\t\t\"drop_table\": \"warn\",\n"
+	"\t\t\"drop_column\": \"warn\",\n"
+	"\t\t\"column_type\": \"warn\",\n"
+	"\t\t\"not_null_added\": \"warn\",\n"
+	"\t\t\"unique_added\": \"off\",\n"
+	"\t\t\"rename\": \"off\"\n"
 	"\t},\n"
 	"\t\"queries\": []\n"
 	"}\n";

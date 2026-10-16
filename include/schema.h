@@ -28,7 +28,14 @@ typedef struct {
 	char               *dir;
 	char               *manifest;
 	SG_VEC(sg_script)   scripts;
+	size_t              end;       //!< Index into the history: the schema once this patch has run.
 } sg_patch;
+
+/** @brief The schema as one statement left it. */
+typedef struct {
+	sg_origin  at;      //!< The statement; for the first snapshot, the system-tables script (line 0).
+	sg_model   model;
+} sg_snapshot;
 
 /** @brief Records which script created a schema object, for @ref sg_origin. */
 typedef struct {
@@ -42,6 +49,8 @@ typedef struct sg_patchset {
 	char                       *systables;   //!< Borrowed from the config; NULL when there is none.
 	SG_VEC(sg_patch)            patches;     //!< In precedence order.
 	SG_VEC(sg_object_origin)    origins;     //!< Filled by @ref sg_schema_load.
+	SG_VEC(sg_snapshot)         history;     //!< Filled by @ref sg_schema_load; see there.
+	int                         version;     //!< The scratch database's schema_version, while loading.
 } sg_patchset;
 
 /**
@@ -58,6 +67,12 @@ bool sg_patches_find(const sg_config *config, sg_patchset *out);
  * reported at its `file:line:col`; a script that ends the transaction it runs in (a COMMIT, END or
  * ROLLBACK of its own) is refused, because a migration runner applying it the same way would lose
  * its atomicity. Loading stops at the first failing script, since later ones build on it.
+ *
+ * The schema's history is kept as it goes: a snapshot of the model once the system tables exist
+ * (the empty schema when there are none), and another after every statement of a patch that
+ * changes the schema, which `pragma schema_version` tells. Each patch records the snapshot it
+ * ends on. Comparing two of them, with the steps between, is what says how a patch changed the
+ * schema and which statement did it.
  *
  * With foreign keys enabled, `pragma foreign_key_check` runs once everything is loaded, so seed
  * rows that reference nothing are found here rather than at a deployment.

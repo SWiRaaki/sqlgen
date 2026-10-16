@@ -112,9 +112,18 @@ typedef struct {
 	sg_names                 triggers;
 } sg_table;
 
+/** @brief An object as `sqlite_schema` records it, for comparing what the model does not take apart. */
+typedef struct {
+	char *type;    //!< "table", "view", "index" or "trigger".
+	char *name;
+	char *table;   //!< The table it belongs to; its own name for a table or view.
+	char *sql;     //!< The statement that created it, as SQLite keeps it.
+} sg_object;
+
 typedef struct {
 	char               *sqlite_version;
 	SG_VEC(sg_table)    tables;          //!< Tables, views and virtual tables, sorted by name.
+	SG_VEC(sg_object)   objects;         //!< Every object with a statement of its own, by type and name.
 } sg_model;
 
 /**
@@ -133,11 +142,20 @@ typedef struct {
  */
 bool sg_introspect(sqlite3 *db, sg_model *out);
 
+/**
+ * @brief @ref sg_introspect between two statements of a patch, where a view may read a table that
+ *        is being rebuilt: such a view is kept without columns instead of failing.
+ */
+bool sg_introspect_between(sqlite3 *db, sg_model *out);
+
 /** @brief Find a table by name, ASCII case-insensitively as SQLite matches identifiers; NULL when there is none. */
 sg_table *sg_model_table(const sg_model *model, const char *name);
 
 /** @brief Find a column by name, case-insensitively like @ref sg_model_table; NULL when there is none. */
 sg_column *sg_table_column(const sg_table *table, const char *name);
+
+/** @brief The object of @p type called @p name, or NULL. */
+const sg_object *sg_model_object(const sg_model *model, const char *type, const char *name);
 
 /** @brief Whether @p name must be quoted in SQL: a keyword, or not a plain identifier. */
 bool sg_needs_quote(const char *name);

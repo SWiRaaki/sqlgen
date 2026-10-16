@@ -9,6 +9,9 @@ commands:
   report    print the model of an existing database as JSON, and check it
             (rule levels from -c when given, else the defaults)
   generate  check the schema, then write every target's files
+  diff      what changed: --from <version> [--to <version>] between two patches,
+            or --db <file> between a database and the scripts at its patch;
+            exits 0 when nothing differs, 1 when something does, 2 on errors
   templates <language> <dir>
             write a language's built-in templates into dir, to copy and change
 
@@ -16,7 +19,10 @@ options:
   -c, --config <file>  configuration (default: sqlgen.json, written with every
                        default when it does not exist)
   -o, --output <file>  write to a file instead of standard output
-      --db <file>      the database to report on
+      --db <file>      the database to report on or compare
+      --from, --to <version>
+                       the patches diff compares; --to defaults to the newest
+      --json           diff: print the changes as JSON
       --key <key>      its encryption key (needs a build with CIPHER=1)
       --strict         treat rule warnings as errors
       --yes            clear output directories without asking

@@ -1,0 +1,1 @@
+sqlgen: error: --to 1.0.0 comes before --from 1.1.0

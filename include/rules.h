@@ -23,6 +23,18 @@
  * `query_scan` looks at the query files: each full table scan `explain query plan` reports for one,
  * unless the file says `-- @allow scan`, is reported at the start of its statement.
  *
+ * The migration rules compare each patch with the schema the patches before it left, as
+ * @ref sg_diff does, and report at the statement that made the change -- for a rebuilt table, the
+ * `create table` of its replacement:
+ *   - `drop_table`: a table that existed is dropped, and its rows with it;
+ *   - `drop_column`: a column that existed is dropped;
+ *   - `column_type`: a column's declared type changes;
+ *   - `not_null_added`: a column becomes NOT NULL, which fails on a row that holds NULL there;
+ *   - `unique_added`: a table that existed gains a unique key or unique index, which fails on rows
+ *     that repeat it;
+ *   - `rename`: a table or column is renamed, and the generated names with it.
+ * What a patch creates and changes itself is new, and none of its business.
+ *
  * Independently of the rules, a `tables` entry naming no table in the schema is always an error:
  * it is a misspelling, and the options it sets would otherwise silently apply to nothing.
  */
@@ -32,6 +44,7 @@
 #include "config.h"
 #include "model.h"
 #include "query.h"
+#include "schema.h"
 
 typedef struct {
 	sqlite3         *db;       //!< The database the model was read from; `fk_target` asks it.
@@ -40,6 +53,7 @@ typedef struct {
 	const char      *source;   //!< Where findings without a script are reported; NULL for none.
 	bool             strict;   //!< Report warnings as errors.
 	const sg_queries *queries; //!< The query files, for `query_scan`; NULL for none.
+	const sg_patchset *patches; //!< With the schema's history, for the migration rules; NULL for none.
 } sg_rules_input;
 
 typedef struct {

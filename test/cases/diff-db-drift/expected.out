@@ -1,0 +1,4 @@
+~ index keep.ix_keep_v: on (v) → on (v, id)
++ table scratch
+~ column users.age: text → integer
++ column users.hotfix: text

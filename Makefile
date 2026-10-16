@@ -14,7 +14,7 @@ BUILD    ?= release
 CIPHER   ?= 0
 SUFFIX   :=
 
-SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/generate.c src/model_json.c src/main.c
+SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/diff.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/generate.c src/model_json.c src/main.c
 HDR      := $(wildcard include/*.h)
 
 CSTD     := -std=c99

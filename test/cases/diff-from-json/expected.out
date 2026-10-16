@@ -1,0 +1,10 @@
+[
+	{"change": "add", "thing": "table", "table": "fresh", "name": null, "old_name": null, "before": null, "after": "table", "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 19, "col": 1}},
+	{"change": "remove", "thing": "column", "table": "keep", "name": "extra", "old_name": null, "before": "text", "after": null, "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 2, "col": 1}},
+	{"change": "add", "thing": "index", "table": "keep", "name": "ux_keep_v", "old_name": null, "before": null, "after": "unique on (v)", "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 5, "col": 1}},
+	{"change": "rename", "thing": "table", "table": "labels", "name": null, "old_name": "tags", "before": null, "after": null, "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 3, "col": 1}},
+	{"change": "rename", "thing": "column", "table": "labels", "name": "name", "old_name": "slug", "before": null, "after": null, "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 4, "col": 1}},
+	{"change": "remove", "thing": "table", "table": "logs", "name": null, "old_name": null, "before": "table", "after": null, "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 1, "col": 1}},
+	{"change": "alter", "thing": "column", "table": "users", "name": "age", "old_name": null, "before": "text", "after": "integer", "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 8, "col": 1}},
+	{"change": "alter", "thing": "column", "table": "users", "name": "nick", "old_name": null, "before": "text", "after": "text not null default ''", "at": {"script": "../migrate-lint/sql/1.1.0/changes.sql", "line": 8, "col": 1}}
+]

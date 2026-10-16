@@ -299,6 +299,29 @@ static bool read_triggers(sqlite3 *db, sg_model *model) {
 	return finish(db, stmt, rc);
 }
 
+/* Objects internal to SQLite or to the generated migration are left out, as they are from the tables. */
+static bool read_objects(sqlite3 *db, sg_model *model) {
+	sqlite3_stmt *stmt = prepare(db, "select type, name, tbl_name, sql from sqlite_schema"
+			" where sql is not null and substr(name, 1, 7) <> 'sqlite_' collate nocase"
+			" and substr(tbl_name, 1, 5) <> '_sys_' collate nocase order by type, name");
+	int           rc;
+
+	if (!stmt) {
+		return false;
+	}
+
+	while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+		sg_object *object = SG_PUSH(model->objects);
+
+		object->type  = column_dup(stmt, 0);
+		object->name  = column_dup(stmt, 1);
+		object->table = column_dup(stmt, 2);
+		object->sql   = column_dup(stmt, 3);
+	}
+
+	return finish(db, stmt, rc);
+}
+
 /* Whether the first @p count names of @p left are, in any order, exactly the names of @p right. */
 static bool same_set(const sg_names *left, const sg_names *right, size_t count) {
 	if (left->count < count || right->count != count) {
@@ -494,7 +517,20 @@ static int compare_foreign_keys(const void *left, const void *right) {
 	return l->id - r->id;
 }
 
-bool sg_introspect(sqlite3 *db, sg_model *out) {
+/* Whether a view's statement compiles: within a patch, a table it reads may be mid-rebuild. */
+static bool view_readable(sqlite3 *db, const char *name) {
+	char         *quoted = quote_identifier(name);
+	char         *sql    = sg_format("select * from %s", quoted);
+	sqlite3_stmt *stmt   = NULL;
+	bool          ok     = sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK;
+
+	sqlite3_finalize(stmt);
+	free(sql);
+	free(quoted);
+	return ok;
+}
+
+static bool introspect(sqlite3 *db, sg_model *out, bool lenient) {
 	sqlite3_stmt *stmt = prepare(db, "select name, type, wr, strict from pragma_table_list"
 			" where schema = 'main' and type in ('table', 'view', 'virtual')"
 			" and substr(name, 1, 7) <> 'sqlite_' collate nocase"
@@ -527,6 +563,10 @@ bool sg_introspect(sqlite3 *db, sg_model *out) {
 	for (size_t i = 0; i < out->tables.count; ++i) {
 		sg_table *table = &out->tables.items[i];
 
+		if (lenient && table->kind == SG_VIEW && !view_readable(db, table->name)) {
+			continue;
+		}
+
 		if (!read_columns(db, table)) {
 			return false;
 		}
@@ -558,13 +598,33 @@ bool sg_introspect(sqlite3 *db, sg_model *out) {
 		}
 	}
 
-	return read_triggers(db, out);
+	return read_triggers(db, out) && read_objects(db, out);
+}
+
+bool sg_introspect(sqlite3 *db, sg_model *out) {
+	return introspect(db, out, false);
+}
+
+bool sg_introspect_between(sqlite3 *db, sg_model *out) {
+	return introspect(db, out, true);
 }
 
 sg_table *sg_model_table(const sg_model *model, const char *name) {
 	for (size_t i = 0; i < model->tables.count; ++i) {
 		if (sg_strcasecmp(model->tables.items[i].name, name) == 0) {
 			return &model->tables.items[i];
+		}
+	}
+
+	return NULL;
+}
+
+const sg_object *sg_model_object(const sg_model *model, const char *type, const char *name) {
+	for (size_t i = 0; i < model->objects.count; ++i) {
+		const sg_object *object = &model->objects.items[i];
+
+		if (strcmp(object->type, type) == 0 && sg_strcasecmp(object->name, name) == 0) {
+			return object;
 		}
 	}
 
@@ -656,6 +716,15 @@ void sg_model_free(sg_model *model) {
 	}
 
 	free(model->tables.items);
+
+	for (size_t i = 0; i < model->objects.count; ++i) {
+		free(model->objects.items[i].type);
+		free(model->objects.items[i].name);
+		free(model->objects.items[i].table);
+		free(model->objects.items[i].sql);
+	}
+
+	free(model->objects.items);
 	free(model->sqlite_version);
 	memset(model, 0, sizeof *model);
 }

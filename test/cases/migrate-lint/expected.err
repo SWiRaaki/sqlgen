@@ -1,0 +1,7 @@
+sql/1.1.0/changes.sql:2:1: warning: patch 1.1.0 drops column keep.extra; its values are lost [drop_column]
+sql/1.1.0/changes.sql:5:1: warning: patch 1.1.0 adds the unique index ux_keep_v to keep, which existed; the patch fails on rows that repeat it [unique_added]
+sql/1.1.0/changes.sql:3:1: warning: patch 1.1.0 renames table tags to labels; the generated names change with it [rename]
+sql/1.1.0/changes.sql:4:1: warning: patch 1.1.0 renames column labels.slug to name; the generated names change with it [rename]
+sql/1.1.0/changes.sql:1:1: warning: patch 1.1.0 drops table logs; its rows are lost [drop_table]
+sql/1.1.0/changes.sql:8:1: warning: patch 1.1.0 changes users.age from text to integer; copied values are converted where they can be and kept as they are where not (a STRICT table refuses them) [column_type]
+sql/1.1.0/changes.sql:8:1: warning: patch 1.1.0 makes users.nick NOT NULL; the patch fails on a row that holds NULL there [not_null_added]

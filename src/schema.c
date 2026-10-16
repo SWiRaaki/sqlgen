@@ -368,6 +368,39 @@ static char *record_origins(sqlite3 *db, sg_patchset *set, sg_origin origin) {
 
 /* Origins are recorded after every statement that writes, not once per script: a script that drops
  * and recreates a table would otherwise leave the table's first creator as its origin. */
+static int schema_version(sqlite3 *db) {
+	sqlite3_stmt *stmt    = NULL;
+	int           version = -1;
+
+	if (sqlite3_prepare_v2(db, "pragma schema_version", -1, &stmt, NULL) == SQLITE_OK
+			&& sqlite3_step(stmt) == SQLITE_ROW) {
+		version = sqlite3_column_int(stmt, 0);
+	}
+
+	sqlite3_finalize(stmt);
+	return version;
+}
+
+static bool snapshot(sqlite3 *db, sg_patchset *set, sg_origin at) {
+	sg_snapshot *shot = SG_PUSH(set->history);
+
+	shot->at     = at;
+	set->version = schema_version(db);
+
+	if (!sg_introspect_between(db, &shot->model)) {
+		sg_error(at.script, at.line, at.col, "the schema could not be read after this statement: %s",
+				sqlite3_errmsg(db));
+		return false;
+	}
+
+	return true;
+}
+
+/* Only a statement that changed the schema adds to its history; inserting seed rows does not. */
+static bool snapshot_if_changed(sqlite3 *db, sg_patchset *set, sg_origin at) {
+	return schema_version(db) == set->version || snapshot(db, set, at);
+}
+
 static bool apply_script(sqlite3 *db, const char *path, sg_patchset *set, sg_origin origin) {
 	char   *text = NULL;
 	size_t  len  = 0;
@@ -434,6 +467,11 @@ static bool apply_script(sqlite3 *db, const char *path, sg_patchset *set, sg_ori
 			sg_line_col(text, statement_start(text, at, len), &here.line, &here.col);
 
 			char *forbidden = record_origins(db, set, here);
+
+			if (!forbidden && !origin.system && !snapshot_if_changed(db, set, here)) {
+				ok = false;
+				break;
+			}
 
 			if (forbidden) {
 				char *message = sg_format("%s starts with " RESERVED_PREFIX ", which is reserved for the"
@@ -574,6 +612,12 @@ bool sg_schema_load(sqlite3 *db, const sg_config *config, sg_patchset *set) {
 		return false;
 	}
 
+	sg_origin base = { set->systables, NULL, true, 0, 0 };
+
+	if (!snapshot(db, set, base)) {
+		return false;
+	}
+
 	for (size_t i = 0; i < set->patches.count; ++i) {
 		sg_patch *patch = &set->patches.items[i];
 
@@ -582,6 +626,8 @@ bool sg_schema_load(sqlite3 *db, const sg_config *config, sg_patchset *set) {
 				return false;
 			}
 		}
+
+		patch->end = set->history.count - 1;
 	}
 
 	if (set->systables && !systables_repeatable(db, set)) {
@@ -648,5 +694,11 @@ void sg_patchset_free(sg_patchset *set) {
 	}
 
 	free(set->origins.items);
+
+	for (size_t i = 0; i < set->history.count; ++i) {
+		sg_model_free(&set->history.items[i].model);
+	}
+
+	free(set->history.items);
 	memset(set, 0, sizeof *set);
 }

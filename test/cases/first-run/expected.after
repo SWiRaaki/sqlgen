@@ -35,7 +35,13 @@
 		"updated_at_needs_created_at": { "level": "off", "updated": "updated_at", "created": "created_at" },
 		"stamp_type": { "level": "off", "pattern": "*_at" },
 		"prefix_origin": { "level": "off", "prefix": null },
-		"query_scan": "warn"
+		"query_scan": "warn",
+		"drop_table": "warn",
+		"drop_column": "warn",
+		"column_type": "warn",
+		"not_null_added": "warn",
+		"unique_added": "off",
+		"rename": "off"
 	},
 	"queries": []
 }

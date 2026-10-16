@@ -1,5 +1,8 @@
 #include "rules.h"
 
+#include "diff.h"
+
+#include <ctype.h>
 #include <fnmatch.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -350,6 +353,117 @@ static void query_scan(run *r, const sg_queries *queries) {
 	}
 }
 
+/* A finding of a migration rule, at the statement that made the change, else at the patch. */
+static void migration_finding(run *r, const char *rule, const sg_patch *patch, const sg_change *c,
+		const char *fmt, ...) SG_PRINTF(5, 6);
+
+static void migration_finding(run *r, const char *rule, const sg_patch *patch, const sg_change *c,
+		const char *fmt, ...) {
+	const sg_rule_config *config = sg_config_rule(r->in->config, rule);
+
+	if (!config || config->level == SG_LEVEL_OFF) {
+		return;
+	}
+
+	va_list args;
+	char    message[512];
+
+	va_start(args, fmt);
+	vsnprintf(message, sizeof message, fmt, args);
+	va_end(args);
+
+	const char *file  = c->located ? c->at.script : patch->manifest;
+	unsigned    line  = c->located ? c->at.line : 0;
+	unsigned    col   = c->located ? c->at.col : 0;
+
+	if (config->level == SG_LEVEL_ERROR || r->in->strict) {
+		sg_error(file, line, col, "patch %s %s [%s]", patch->version.text, message, rule);
+		++r->out->errors;
+	} else {
+		sg_warning(file, line, col, "patch %s %s [%s]", patch->version.text, message, rule);
+		++r->out->warnings;
+	}
+}
+
+/* A declared type in lowercase, like the rest of a message; into @p out, which holds 64 bytes. */
+static const char *declared(const sg_column *c, char *out) {
+	const char *type = c->declared_type[0] ? c->declared_type : "no type";
+	size_t      i    = 0;
+
+	for (; type[i] && i < 63; ++i) {
+		out[i] = (char)tolower((unsigned char)type[i]);
+	}
+
+	out[i] = '\0';
+	return out;
+}
+
+static void migration_change(run *r, const sg_patch *patch, const sg_change *c) {
+	if (c->thing == SG_THING_TABLE && c->kind == SG_CHANGE_REMOVE && c->old_table->kind == SG_TABLE) {
+		migration_finding(r, "drop_table", patch, c, "drops table %s; its rows are lost", c->table);
+	} else if (c->thing == SG_THING_COLUMN && c->kind == SG_CHANGE_REMOVE) {
+		migration_finding(r, "drop_column", patch, c, "drops column %s.%s; its values are lost", c->table,
+				c->name);
+	} else if (c->thing == SG_THING_COLUMN && c->kind == SG_CHANGE_ALTER) {
+		char was[64];
+		char is[64];
+
+		if (sg_strcasecmp(c->old_column->declared_type, c->new_column->declared_type) != 0) {
+			migration_finding(r, "column_type", patch, c, "changes %s.%s from %s to %s; copied values are"
+					" converted where they can be and kept as they are where not (a STRICT table refuses them)",
+					c->table, c->name, declared(c->old_column, was), declared(c->new_column, is));
+		}
+
+		if (!c->old_column->notnull_declared && c->new_column->notnull_declared) {
+			migration_finding(r, "not_null_added", patch, c, "makes %s.%s NOT NULL; the patch fails on a row"
+					" that holds NULL there", c->table, c->name);
+		}
+	} else if (c->kind == SG_CHANGE_ADD && c->old_table && (c->thing == SG_THING_UNIQUE
+			|| (c->thing == SG_THING_INDEX && strncmp(c->after, "unique ", 7) == 0))) {
+		migration_finding(r, "unique_added", patch, c, "adds %s %s to %s, which existed; the patch fails on"
+				" rows that repeat it", c->thing == SG_THING_INDEX ? "the unique index" : "the key",
+				c->thing == SG_THING_INDEX ? c->name : c->after, c->table);
+	} else if (c->kind == SG_CHANGE_RENAME && c->thing == SG_THING_TABLE) {
+		migration_finding(r, "rename", patch, c, "renames table %s to %s; the generated names change with it",
+				c->old_name, c->table);
+	} else if (c->kind == SG_CHANGE_RENAME && c->thing == SG_THING_COLUMN) {
+		migration_finding(r, "rename", patch, c, "renames column %s.%s to %s; the generated names change"
+				" with it", c->table, c->old_name, c->name);
+	}
+}
+
+/* Each patch against the schema before it, through the snapshots it took. */
+static void migrations(run *r, const sg_patchset *set) {
+	for (size_t p = 0; set && p < set->patches.count; ++p) {
+		const sg_patch *patch = &set->patches.items[p];
+		size_t          from  = p ? set->patches.items[p - 1].end : 0;
+		size_t          count = patch->end - from + 1;
+
+		if (count < 2) {
+			continue;
+		}
+
+		const sg_model **steps = sg_xmalloc(sizeof *steps * count);
+		sg_origin       *at    = sg_xmalloc(sizeof *at * count);
+		sg_changes       changes;
+
+		for (size_t i = 0; i < count; ++i) {
+			steps[i] = &set->history.items[from + i].model;
+			at[i]    = set->history.items[from + i].at;
+		}
+
+		sg_diff(steps, at, count, &changes);
+
+		for (size_t i = 0; i < changes.count; ++i) {
+			migration_change(r, patch, &changes.items[i]);
+		}
+
+		sg_changes_free(&changes);
+		free(steps);
+		free(at);
+	}
+}
+
 void sg_rules_run(const sg_rules_input *in, sg_rules_result *out) {
 	run r = { in, out, NULL };
 
@@ -379,5 +493,6 @@ void sg_rules_run(const sg_rules_input *in, sg_rules_result *out) {
 		query_scan(&r, in->queries);
 	}
 
+	migrations(&r, in->patches);
 	unknown_tables(in, out);
 }

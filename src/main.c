@@ -5,6 +5,7 @@
 #include <sqlite3.h>
 
 #include "config.h"
+#include "diff.h"
 #include "model.h"
 #include "plan.h"
 #include "query.h"
@@ -31,6 +32,9 @@ typedef struct {
 	const char *key;
 	bool        strict;         /* --strict: warnings are errors */
 	bool        yes;            /* --yes: clear output directories without asking */
+	const char *from;           /* diff: the older patch */
+	const char *to;             /* diff: the newer patch */
+	bool        json;           /* diff: JSON instead of lines */
 } options;
 
 static void usage(FILE *to) {
@@ -44,6 +48,9 @@ static void usage(FILE *to) {
 			"  report    print the model of an existing database as JSON, and check it\n"
 			"            (rule levels from -c when given, else the defaults)\n"
 			"  generate  check the schema, then write every target's files\n"
+			"  diff      what changed: --from <version> [--to <version>] between two patches,\n"
+			"            or --db <file> between a database and the scripts at its patch;\n"
+			"            exits 0 when nothing differs, 1 when something does, 2 on errors\n"
 			"  templates <language> <dir>\n"
 			"            write a language's built-in templates into dir, to copy and change\n"
 			"\n"
@@ -51,7 +58,10 @@ static void usage(FILE *to) {
 			"  -c, --config <file>  configuration (default: sqlgen.json, written with every\n"
 			"                       default when it does not exist)\n"
 			"  -o, --output <file>  write to a file instead of standard output\n"
-			"      --db <file>      the database to report on\n"
+			"      --db <file>      the database to report on or compare\n"
+			"      --from, --to <version>\n"
+			"                       the patches diff compares; --to defaults to the newest\n"
+			"      --json           diff: print the changes as JSON\n"
 			"      --key <key>      its encryption key (needs a build with CIPHER=1)\n"
 			"      --strict         treat rule warnings as errors\n"
 			"      --yes            clear output directories without asking\n"
@@ -76,6 +86,12 @@ static bool parse(int argc, char **argv, options *out) {
 			out->database = argv[++i];
 		} else if (strcmp(arg, "--key") == 0 && value) {
 			out->key = argv[++i];
+		} else if (strcmp(arg, "--from") == 0 && value) {
+			out->from = argv[++i];
+		} else if (strcmp(arg, "--to") == 0 && value) {
+			out->to = argv[++i];
+		} else if (strcmp(arg, "--json") == 0) {
+			out->json = true;
 		} else if (strcmp(arg, "--strict") == 0) {
 			out->strict = true;
 		} else if (strcmp(arg, "--yes") == 0) {
@@ -210,7 +226,7 @@ static int run_schema(const options *opts, mode what) {
 		status = emit(opts, &json) ? 0 : EXIT_INPUT;
 		sg_buf_free(&json);
 	} else if (what == MODE_GENERATE) {
-		sg_rules_input      input   = { db, &model, &config, NULL, opts->strict, &queries };
+		sg_rules_input      input   = { db, &model, &config, NULL, opts->strict, &queries, &patches };
 		sg_rules_result     result;
 		sg_plan             plan    = {0};
 		sg_generate_options settings = { opts->config, opts->yes };
@@ -225,7 +241,7 @@ static int run_schema(const options *opts, mode what) {
 
 		sg_plan_free(&plan);
 	} else if (what == MODE_PLAN) {
-		sg_rules_input  input = { db, &model, &config, NULL, opts->strict, &queries };
+		sg_rules_input  input = { db, &model, &config, NULL, opts->strict, &queries, &patches };
 		sg_rules_result result;
 		sg_plan         plan  = {0};
 
@@ -243,7 +259,7 @@ static int run_schema(const options *opts, mode what) {
 
 		sg_plan_free(&plan);
 	} else {
-		sg_rules_input  input  = { db, &model, &config, NULL, opts->strict, &queries };
+		sg_rules_input  input  = { db, &model, &config, NULL, opts->strict, &queries, &patches };
 		sg_rules_result result;
 		size_t          tables = 0;
 		size_t          views  = 0;
@@ -286,6 +302,43 @@ done:
 	return status;
 }
 
+/* The database --db names, read-only, with --key applied; NULL when it cannot be read. */
+static sqlite3 *open_live(const options *opts) {
+	sqlite3 *db = NULL;
+
+	if (sqlite3_open_v2(opts->database, &db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
+		sg_error(opts->database, 0, 0, "cannot be opened: %s", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return NULL;
+	}
+
+	if (opts->key) {
+#ifdef SQLITE_HAS_CODEC
+		/* SQLCipher otherwise prints its own diagnostics for a wrong key, beside the one below. */
+		sqlite3_exec(db, "pragma cipher_log_level = NONE", NULL, NULL, NULL);
+
+		if (sqlite3_key(db, opts->key, (int)strlen(opts->key)) != SQLITE_OK) {
+			sg_error(opts->database, 0, 0, "the key could not be applied: %s", sqlite3_errmsg(db));
+			sqlite3_close(db);
+			return NULL;
+		}
+#else
+		sg_error(NULL, 0, 0, "this sqlgen was built without encryption; rebuild with make CIPHER=1");
+		sqlite3_close(db);
+		return NULL;
+#endif
+	}
+
+	/* Opening is lazy; the first read is what finds a wrong key or a file that is no database. */
+	if (sqlite3_exec(db, "select count(*) from sqlite_schema", NULL, NULL, NULL) != SQLITE_OK) {
+		sg_error(opts->database, 0, 0, "cannot be read: %s", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		return NULL;
+	}
+
+	return db;
+}
+
 static int run_report(const options *opts) {
 	sqlite3   *db     = NULL;
 	sg_model   model  = {0};
@@ -297,29 +350,7 @@ static int run_report(const options *opts) {
 		return EXIT_USAGE;
 	}
 
-	if (sqlite3_open_v2(opts->database, &db, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
-		sg_error(opts->database, 0, 0, "cannot be opened: %s", sqlite3_errmsg(db));
-		goto done;
-	}
-
-	if (opts->key) {
-#ifdef SQLITE_HAS_CODEC
-		/* SQLCipher otherwise prints its own diagnostics for a wrong key, beside the one below. */
-		sqlite3_exec(db, "pragma cipher_log_level = NONE", NULL, NULL, NULL);
-
-		if (sqlite3_key(db, opts->key, (int)strlen(opts->key)) != SQLITE_OK) {
-			sg_error(opts->database, 0, 0, "the key could not be applied: %s", sqlite3_errmsg(db));
-			goto done;
-		}
-#else
-		sg_error(NULL, 0, 0, "this sqlgen was built without encryption; rebuild with make CIPHER=1");
-		goto done;
-#endif
-	}
-
-	/* Opening is lazy; the first read is what finds a wrong key or a file that is no database. */
-	if (sqlite3_exec(db, "select count(*) from sqlite_schema", NULL, NULL, NULL) != SQLITE_OK) {
-		sg_error(opts->database, 0, 0, "cannot be read: %s", sqlite3_errmsg(db));
+	if ((db = open_live(opts)) == NULL) {
 		goto done;
 	}
 
@@ -330,7 +361,7 @@ static int run_report(const options *opts) {
 	}
 
 	if (sg_introspect(db, &model)) {
-		sg_rules_input  input = { db, &model, &config, opts->database, opts->strict, NULL };
+		sg_rules_input  input = { db, &model, &config, opts->database, opts->strict, NULL, NULL };
 		sg_rules_result result;
 		sg_buf          json  = {0};
 
@@ -350,6 +381,191 @@ done:
 	sg_model_free(&model);
 	sg_config_free(&config);
 	sqlite3_close(db);
+	return status;
+}
+
+enum {
+	DIFF_SAME      = 0,
+	DIFF_DIFFERENT = 1,
+	DIFF_TROUBLE   = 2   /* like diff(1): anything that kept the comparison from being made */
+};
+
+/* The patch @p text names, by precedence: build metadata does not tell patches apart. */
+static long find_patch(const sg_patchset *set, const char *text) {
+	sg_semver version;
+	size_t    at = 0;
+	long      found = -1;
+
+	if (!sg_semver_parse(text, strlen(text), &version, &at)) {
+		sg_error(NULL, 0, 0, "'%s' is not a version", text);
+		return -1;
+	}
+
+	for (size_t i = 0; i < set->patches.count; ++i) {
+		if (sg_semver_compare(&set->patches.items[i].version, &version) == 0) {
+			found = (long)i;
+		}
+	}
+
+	if (found < 0) {
+		sg_error(NULL, 0, 0, "no patch has the version %s", text);
+	}
+
+	sg_semver_free(&version);
+	return found;
+}
+
+static void diff_range(const sg_patchset *set, size_t from, size_t to, sg_changes *out) {
+	size_t           count = to - from + 1;
+	const sg_model **steps = sg_xmalloc(sizeof *steps * count);
+	sg_origin       *at    = sg_xmalloc(sizeof *at * count);
+
+	for (size_t i = 0; i < count; ++i) {
+		steps[i] = &set->history.items[from + i].model;
+		at[i]    = set->history.items[from + i].at;
+	}
+
+	sg_diff(steps, at, count, out);
+	free(steps);
+	free(at);
+}
+
+/*
+ * The patch a database is at, by its _sys_patch: the newest one recorded. -1 when it has no
+ * _sys_patch or no row in it; -2, reported, when it records a patch the scripts do not have.
+ */
+static long applied_patch(sqlite3 *db, const char *file, const sg_patchset *set) {
+	sqlite3_stmt *stmt   = NULL;
+	long          newest = -1;
+	int           rc;
+
+	if (sqlite3_prepare_v2(db, "select major, minor, patch, prerelease from _sys_patch", -1, &stmt, NULL)
+			!= SQLITE_OK) {
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+
+	while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
+		const char *pre   = (const char *)sqlite3_column_text(stmt, 3);
+		long        found = -1;
+
+		for (size_t i = 0; i < set->patches.count; ++i) {
+			const sg_semver *v = &set->patches.items[i].version;
+
+			if (v->major == (uint64_t)sqlite3_column_int64(stmt, 0) && v->minor == (uint64_t)sqlite3_column_int64(stmt, 1)
+					&& v->patch == (uint64_t)sqlite3_column_int64(stmt, 2) && strcmp(v->prerelease, pre ? pre : "") == 0) {
+				found = (long)i;
+			}
+		}
+
+		if (found < 0) {
+			sg_error(file, 0, 0, "has patch %lld.%lld.%lld%s%s applied, which the scripts do not have;"
+					" a newer program migrated it", sqlite3_column_int64(stmt, 0), sqlite3_column_int64(stmt, 1),
+					sqlite3_column_int64(stmt, 2), pre && *pre ? "-" : "", pre ? pre : "");
+			newest = -2;
+			break;
+		}
+
+		newest = found > newest ? found : newest;
+	}
+
+	sqlite3_finalize(stmt);
+	return newest;
+}
+
+static int run_diff(const options *opts) {
+	sg_config   config  = {0};
+	sg_patchset patches = {0};
+	sqlite3    *db      = NULL;
+	sqlite3    *live    = NULL;
+	sg_model    model   = {0};
+	sg_changes  changes = {0};
+	int         status  = DIFF_TROUBLE;
+
+	if (!opts->database == !opts->from || (opts->to && !opts->from)) {
+		sg_error(NULL, 0, 0, "diff needs either --from <version> (and optionally --to <version>) or"
+				" --db <file>");
+		return DIFF_TROUBLE;
+	}
+
+	if (first_run(opts) || !sg_config_load(opts->config, &config) || !sg_patches_find(&config, &patches)) {
+		goto done;
+	}
+
+	if (patches.patches.count == 0) {
+		sg_error(config.path, 0, 0, "names no patch, so there is nothing to compare");
+		goto done;
+	}
+
+	db = open_scratch();
+
+	if (!db || !sg_schema_load(db, &config, &patches)) {
+		goto done;
+	}
+
+	if (opts->from) {
+		long from = find_patch(&patches, opts->from);
+		long to   = opts->to ? find_patch(&patches, opts->to) : (long)patches.patches.count - 1;
+
+		if (from < 0 || to < 0) {
+			goto done;
+		}
+
+		if (to < from) {
+			sg_error(NULL, 0, 0, "--to %s comes before --from %s", opts->to, opts->from);
+			goto done;
+		}
+
+		diff_range(&patches, patches.patches.items[from].end, patches.patches.items[to].end, &changes);
+	} else {
+		if ((live = open_live(opts)) == NULL || !sg_introspect(live, &model)) {
+			goto done;
+		}
+
+		long at   = applied_patch(live, opts->database, &patches);
+		long last = (long)patches.patches.count - 1;
+
+		if (at == -2) {
+			goto done;
+		}
+
+		/* What the database lacks of later patches is pending, not drift. */
+		if (at < 0) {
+			fprintf(stderr, "%s: no patch recorded (_sys_patch); compared with the newest, %s\n",
+					opts->database, patches.patches.items[last].version.text);
+			at = last;
+		} else if (at < last) {
+			fprintf(stderr, "%s: at patch %s; %ld %s pending, up to %s\n", opts->database,
+					patches.patches.items[at].version.text, last - at, plural((size_t)(last - at), "patch", "patches"),
+					patches.patches.items[last].version.text);
+		}
+
+		const sg_model *ends[2] = { &patches.history.items[patches.patches.items[at].end].model, &model };
+
+		sg_diff(ends, NULL, 2, &changes);
+	}
+
+	sg_buf out = {0};
+
+	if (opts->json) {
+		sg_diff_write_json(&changes, &out);
+	} else {
+		sg_diff_write_text(&changes, &out);
+	}
+
+	if (out.len == 0 || emit(opts, &out)) {
+		status = changes.count ? DIFF_DIFFERENT : DIFF_SAME;
+	}
+
+	sg_buf_free(&out);
+
+done:
+	sg_changes_free(&changes);
+	sg_model_free(&model);
+	sqlite3_close(live);
+	sqlite3_close(db);
+	sg_patchset_free(&patches);
+	sg_config_free(&config);
 	return status;
 }
 
@@ -401,6 +617,10 @@ int main(int argc, char **argv) {
 
 	if (strcmp(opts.command, "report") == 0) {
 		return run_report(&opts);
+	}
+
+	if (strcmp(opts.command, "diff") == 0) {
+		return run_diff(&opts);
 	}
 
 	if (strcmp(opts.command, "generate") == 0) {

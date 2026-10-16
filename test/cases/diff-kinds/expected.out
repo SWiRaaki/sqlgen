@@ -1,0 +1,13 @@
+~ table item: table → table, strict
+~ column item.price: real default 0 → real default 1
++ column item.sku: text
+~ column order item: id, owner, label, price → id, label, owner, price
++ key item: unique (label)
+- foreign key item: (owner) references person(id)
++ foreign key item: (owner) references person(id) on delete cascade
+~ index item.ix_item_label: create index ix_item_label on item(label) where price > 0 → create index ix_item_label on item(label) where price > 1
+~ trigger item.tr_item_touch: create trigger tr_item_touch after update on item begin select 1; end → create trigger tr_item_touch after update on item begin select 2; end
+- trigger note.tr_note_gone: create trigger tr_note_gone after delete on note begin select 1; end
++ trigger note.tr_note_new: create trigger tr_note_new after insert on note begin select 1; end
+> table owner → person
+~ view v_items: create view v_items as select id, label from item → create view v_items as select id, label, price from item
