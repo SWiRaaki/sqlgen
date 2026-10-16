@@ -1839,6 +1839,66 @@ static sg_value *builtin(const char *name, const sg_value *input, sg_value *cons
 		return sg_value_copy(input->items.items[args[0]->integer]);
 	}
 
+	if (strcmp(name, "pluck") == 0) {
+		if (count != 1 || args[0]->kind != SG_V_TEXT || input->kind != SG_V_LIST) {
+			return filter_error(error, "pluck takes a list of maps and one text argument, the key: pluck(\"name\")");
+		}
+
+		sg_value *out = sg_value_list();
+
+		for (size_t i = 0; i < input->items.count; ++i) {
+			const sg_value *item   = input->items.items[i];
+			const sg_value *member = item->kind == SG_V_MAP ? sg_map_get(item, args[0]->text) : NULL;
+
+			if (!member) {
+				sg_value_free(out);
+				return filter_error(error, "pluck(\"%s\"): item %zu has no member '%s'", args[0]->text, i,
+						args[0]->text);
+			}
+
+			sg_list_push(out, sg_value_copy(member));
+		}
+
+		return out;
+	}
+
+	if (strcmp(name, "flatten") == 0) {
+		if (count || input->kind != SG_V_LIST) {
+			return filter_error(error, "flatten takes a list of lists, and no arguments");
+		}
+
+		sg_value *out = sg_value_list();
+
+		for (size_t i = 0; i < input->items.count; ++i) {
+			const sg_value *item = input->items.items[i];
+
+			if (item->kind != SG_V_LIST) {
+				sg_value_free(out);
+				return filter_error(error, "flatten takes a list of lists; item %zu is %s", i, sg_vkind_name(item->kind));
+			}
+
+			for (size_t j = 0; j < item->items.count; ++j) {
+				sg_list_push(out, sg_value_copy(item->items.items[j]));
+			}
+		}
+
+		return out;
+	}
+
+	if (strcmp(name, "contains") == 0) {
+		if (count != 1 || input->kind != SG_V_LIST) {
+			return filter_error(error, "contains takes a list and one argument, the value to look for");
+		}
+
+		bool held = false;
+
+		for (size_t i = 0; i < input->items.count && !held; ++i) {
+			held = sg_value_equal(input->items.items[i], args[0]);
+		}
+
+		return sg_value_bool(held);
+	}
+
 	if (strcmp(name, "default") == 0) {
 		if (count != 1) {
 			return filter_error(error, "default takes one argument, the value to use for null");

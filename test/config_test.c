@@ -1,5 +1,6 @@
 /* The configuration: the written defaults agree with the built-in ones, a named table entry
- * replaces "*" key by key, rule levels start from their defaults, and JSON5 is refused. */
+ * replaces "*" key by key, rule levels start from their defaults, target directories default per
+ * language and never nest, and JSON5 is refused. */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,17 +46,28 @@ static void defaults_agree(void) {
 			&& same(written.patch_patterns.items[0], empty.patch_patterns.items[0]), "patches differ");
 	expect(written.double_quoted_strings == empty.double_quoted_strings, "double_quoted_strings differs");
 	expect(written.foreign_keys == empty.foreign_keys, "foreign_keys differs");
-	expect(written.targets.count == 1 && empty.targets.count == 1, "the default target differs");
+	expect(written.targets.count == 3 && empty.targets.count == 3, "the default targets differ");
 
-	if (written.targets.count == 1 && empty.targets.count == 1) {
-		const sg_target *w = &written.targets.items[0];
-		const sg_target *e = &empty.targets.items[0];
+	for (size_t i = 0; i < 3 && written.targets.count == 3 && empty.targets.count == 3; ++i) {
+		const sg_target *w = &written.targets.items[i];
+		const sg_target *e = &empty.targets.items[i];
 
 		expect(same(w->language, e->language) && same(w->dir, e->dir) && same(w->prefix, e->prefix)
 				&& same(w->templates, e->templates) && w->confirm_clear == e->confirm_clear
-				&& w->types.count == e->types.count, "a key of the default target differs");
-		expect(same(e->language, "c") && strstr(e->dir, "gen") && same(e->prefix, "db") && !e->templates
-				&& e->confirm_clear && e->types.count == 0, "the default target changed");
+				&& w->types.count == e->types.count, "a key of a default target differs");
+	}
+
+	if (empty.targets.count == 3) {
+		const sg_target *c  = &empty.targets.items[0];
+		const sg_target *md = &empty.targets.items[1];
+		const sg_target *mm = &empty.targets.items[2];
+
+		expect(same(c->language, "c") && strstr(c->dir, "gen") && same(c->prefix, "db") && !c->templates
+				&& c->confirm_clear && c->types.count == 0, "the default C target changed");
+		expect(same(md->language, "markdown") && strstr(md->dir, "docs/schema") && !md->prefix,
+				"the default markdown target changed");
+		expect(same(mm->language, "mermaid") && strstr(mm->dir, "docs/diagram") && !mm->prefix,
+				"the default mermaid target changed");
 	}
 
 	expect(written.embed_scripts == empty.embed_scripts, "embed_scripts differs");
@@ -156,6 +168,35 @@ static void rules_start_from_defaults(void) {
 	sg_config_free(&config);
 }
 
+/* A target without a directory gets its language's own; none may write inside another's. */
+static void target_directories(void) {
+	sg_config config;
+
+	expect(load("dirs.json", "{ \"targets\": [{ \"language\": \"c\" }, { \"language\": \"markdown\" },"
+			" { \"language\": \"mermaid\", \"dir\": \"./docs//diagram/\" }] }", &config),
+			"targets of different languages without a directory do not load");
+
+	if (config.targets.count == 3) {
+		expect(strstr(config.targets.items[0].dir, "/gen") != NULL, "the C target's directory is not gen");
+		expect(strstr(config.targets.items[1].dir, "/docs/schema") != NULL, "the markdown directory is not docs/schema");
+		expect(strstr(config.targets.items[2].dir, "/docs/diagram") != NULL
+				&& strstr(config.targets.items[2].dir, "//") == NULL && strstr(config.targets.items[2].dir, "/./") == NULL,
+				"a target directory is not normalised");
+	}
+
+	sg_config_free(&config);
+
+	expect(!load("nested.json", "{ \"targets\": [{ \"language\": \"markdown\", \"dir\": \"gen/docs\" },"
+			" { \"language\": \"c\", \"dir\": \"gen\" }] }", &config), "a target inside another's directory loads");
+	sg_config_free(&config);
+	expect(!load("same.json", "{ \"targets\": [{ \"language\": \"markdown\", \"dir\": \"out\" },"
+			" { \"language\": \"mermaid\", \"dir\": \"./out/\" }] }", &config), "two targets in one directory load");
+	sg_config_free(&config);
+	expect(load("siblings.json", "{ \"targets\": [{ \"language\": \"markdown\", \"dir\": \"gen-docs\" },"
+			" { \"language\": \"c\", \"dir\": \"gen\" }] }", &config), "a sibling whose name extends another's is refused");
+	sg_config_free(&config);
+}
+
 static void strict_json_only(void) {
 	sg_config config;
 
@@ -181,6 +222,7 @@ int main(int argc, char **argv) {
 	defaults_agree();
 	tables_replace_key_by_key();
 	rules_start_from_defaults();
+	target_directories();
 	strict_json_only();
 
 	free(dir);

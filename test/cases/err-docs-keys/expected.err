@@ -1,0 +1,2 @@
+sqlgen.json: error: $.targets[0].prefix: unknown key
+sqlgen.json: error: $.targets[0].types: unknown key

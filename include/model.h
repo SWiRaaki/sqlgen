@@ -94,6 +94,8 @@ typedef struct {
 	char       *on_update;
 	char       *on_delete;
 	bool        indexed;         //!< Its columns lead some index of the child table.
+	bool        optional;        //!< One of its columns can be NULL, so a row may reference nothing.
+	bool        unique;          //!< Its columns are a unique key of the child: one child per parent at most.
 } sg_foreign_key;
 
 typedef struct {

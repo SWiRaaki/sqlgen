@@ -102,6 +102,8 @@ typedef struct {
 	char                      hash[17];     //!< FNV-1a 64 of every script's name and text, in order, as hex.
 	sg_words                  custom_types; //!< Every logical type from `types` some column uses, sorted.
 	const sg_queries         *queries;      //!< The query files; borrowed.
+	const sg_model           *model;        //!< What the plan was built from; borrowed.
+	const sg_patchset        *patchset;     //!< Borrowed.
 } sg_plan;
 
 /**

@@ -1,1 +1,1 @@
-sqlgen: error: no built-in templates for the language 'odin'; known: c
+sqlgen: error: no built-in templates for the language 'odin'; known: c, markdown, mermaid

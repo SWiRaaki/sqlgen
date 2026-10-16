@@ -17,6 +17,18 @@
 			"templates": null,
 			"confirm_clear": true,
 			"types": {}
+		},
+		{
+			"language": "markdown",
+			"dir": "docs/schema",
+			"templates": null,
+			"confirm_clear": true
+		},
+		{
+			"language": "mermaid",
+			"dir": "docs/diagram",
+			"templates": null,
+			"confirm_clear": true
 		}
 	],
 	"types": {

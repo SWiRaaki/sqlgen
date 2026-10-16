@@ -20,6 +20,8 @@ typedef struct {
 } sg_builtin_set;
 
 extern const sg_builtin_set sg_builtin_c;
+extern const sg_builtin_set sg_builtin_markdown;
+extern const sg_builtin_set sg_builtin_mermaid;
 
 /** @brief The built-in set for @p language; NULL when there is none. */
 const sg_builtin_set *sg_builtin_templates(const char *language);

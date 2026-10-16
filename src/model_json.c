@@ -130,6 +130,8 @@ static void table(sg_jw *w, const sg_table *t) {
 		sg_jw_text(w, "on_update", fk->on_update);
 		sg_jw_text(w, "on_delete", fk->on_delete);
 		sg_jw_bool(w, "indexed", fk->indexed);
+		sg_jw_bool(w, "optional", fk->optional);
+		sg_jw_bool(w, "unique", fk->unique);
 		sg_jw_close(w, '}');
 	}
 

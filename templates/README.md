@@ -1,7 +1,17 @@
 # Templates
 
-sqlgen turns a schema into source code by rendering templates. Each language has a directory of
-templates here (`c/`), compiled into sqlgen.
+sqlgen turns a schema into source code and documentation by rendering templates. Each language
+has a directory of templates here, compiled into sqlgen:
+
+| Language | Produces |
+|---|---|
+| `c` | a C API over the schema: row types, typed ids, statements, queries, migration |
+| `markdown` | `schema.md`: every table, view and query, and the patches |
+| `mermaid` | `schema.mmd`: an entity-relationship diagram of the tables and their foreign keys |
+
+A `markdown` or `mermaid` target takes only `language`, `dir`, `templates` and `confirm_clear`.
+Without a `dir`, each language writes to its own: `gen`, `docs/schema` and `docs/diagram`. A
+target clears its directory before writing, so no target may write inside another's.
 
 To change the output, export the built-in set, edit it, and point a target at your copy:
 
@@ -148,7 +158,8 @@ lines itself, as above. A snippet called inside a line must fit on one line.
 
 ## Header
 
-A template may start with a header:
+A template may start with a header. It must be the very first thing in the file -- a comment
+goes after it, or the template has no header and produces nothing:
 
 ```
 <<<
@@ -185,7 +196,8 @@ there. Beside it:
 | Name | Value |
 |---|---|
 | `target` | the target: `language`, `dir`, `prefix`, `types` |
-| `prefix` | the target's prefix |
+| `prefix` | the target's prefix; `null` for a language that has none |
+| `model` | the schema as `sqlgen model` prints it: every column's declared type, default and key, every index, unique key and foreign key |
 | `generator` | `name` and `version` of sqlgen |
 | `generated_at` | `YYYY-MM-DD HH:MM:SS UTC`; `SOURCE_DATE_EPOCH` sets it |
 | `command` | the command that regenerates the files |
@@ -272,6 +284,9 @@ For every language:
 | `first`, `last` | the first or last item of a list |
 | `at(i)` | item `i` of a list |
 | `default(x)` | `x` when the value is `null` |
+| `pluck(key)` | each item's member `key`: `t.columns \| pluck("name")` |
+| `flatten` | a list of lists as one list |
+| `contains(x)` | whether a list holds `x` |
 
 The case filters take a text or a list of words; a text is split into words first, so `tokenHash`,
 `token_hash` and `Token Hash` all give the same result.
@@ -287,6 +302,19 @@ For C:
 | `cstring` | a C string literal, quotes included |
 | `cstrings` | a list of string literals, one per line of the text |
 | `cbytes` | lines of a byte array initialiser, for text longer than 4095 bytes |
+
+For Markdown:
+
+| Filter | Result |
+|---|---|
+| `mdcell` | a text fit for a table cell: `\|` escaped, line breaks as spaces |
+| `anchor` | a heading's link target: `User Tags` is `user-tags` |
+
+For Mermaid:
+
+| Filter | Result |
+|---|---|
+| `mmword` | a text as one word Mermaid accepts: `VARCHAR(20)` is `VARCHAR_20` |
 
 ## Errors
 

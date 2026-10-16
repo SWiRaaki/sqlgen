@@ -456,6 +456,17 @@ static void derive_foreign_keys(sg_model *model, sg_table *table) {
 			fk->indexed = sg_strcasecmp(fk->columns.items[0],
 					table->columns.items[table->rowid_alias].name) == 0;
 		}
+
+		for (size_t c = 0; c < n; ++c) {
+			const sg_column *column = sg_table_column(table, fk->columns.items[c]);
+
+			fk->optional = fk->optional || !column || !column->notnull;
+		}
+
+		for (size_t k = 0; k < table->unique_keys.count && !fk->unique; ++k) {
+			fk->unique = table->unique_keys.items[k].columns.count == n
+					&& same_set(&table->unique_keys.items[k].columns, &fk->columns, n);
+		}
 	}
 }
 

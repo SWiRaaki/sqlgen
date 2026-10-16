@@ -14,7 +14,7 @@ BUILD    ?= release
 CIPHER   ?= 0
 SUFFIX   :=
 
-SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/diff.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/generate.c src/model_json.c src/main.c
+SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/diff.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/lang_doc.c src/generate.c src/model_json.c src/main.c
 HDR      := $(wildcard include/*.h)
 
 CSTD     := -std=c99
@@ -66,18 +66,20 @@ $(OUT)/%.o: src/%.c $(HDR) Makefile | $(OUT)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) -c $< -o $@
 
 # The built-in templates: each file under templates/<language>/ is compiled in as a byte array.
-TEMPLATES_C := $(sort $(wildcard templates/c/*.gtpl))
+LANGUAGES := c markdown mermaid
+BUILTIN_O := $(LANGUAGES:%=$(OUT)/builtin_%.o)
 
 $(OUT)/embed: tools/embed.c | $(OUT)
 	$(CC) $(CSTD) $(OPT) $(WARN) $< -o $@
 
-$(OUT)/builtin_c.c: $(OUT)/embed $(TEMPLATES_C) templates/c
-	$(OUT)/embed $@ c $(TEMPLATES_C)
+.SECONDEXPANSION:
+$(OUT)/builtin_%.c: $(OUT)/embed $$(sort $$(wildcard templates/$$*/*.gtpl)) templates/%
+	$(OUT)/embed $@ $* $(sort $(wildcard templates/$*/*.gtpl))
 
-$(OUT)/builtin_c.o: $(OUT)/builtin_c.c $(HDR)
+$(OUT)/builtin_%.o: $(OUT)/builtin_%.c $(HDR)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) -c $< -o $@
 
-$(OUT)/sqlgen: $(OBJ) $(OUT)/builtin_c.o $(SQLITE_O)
+$(OUT)/sqlgen: $(OBJ) $(BUILTIN_O) $(SQLITE_O)
 	$(CC) $(OPT) $^ -o $@ $(LIBS)
 
 # Test helpers: unit tests for the version rules, strict JSON, templates and the configuration, and a tool that builds a database file from a

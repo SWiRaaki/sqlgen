@@ -126,6 +126,13 @@ int main(void) {
 	sg_set_error_sink(collect, NULL);
 
 	/* Plain output, including everything a backslash means in C. */
+	renders("pluck, flatten, contains",
+			"\\(ts | pluck(\"cs\") | flatten | join(\",\")) \\(ts | pluck(\"cs\") | flatten | contains(\"b\")) \\(ts | pluck(\"cs\") | flatten | contains(\"z\"))\n",
+			"{ \"ts\": [{ \"cs\": [\"a\", \"b\"] }, { \"cs\": [] }, { \"cs\": [\"c\"] }] }", "a,b,c true false\n");
+	fails("pluck missing", "\\(ts | pluck(\"x\"))\n", "{ \"ts\": [{ \"cs\": 1 }] }",
+			"t.gtpl:4:8: error: pluck(\"x\"): item 0 has no member 'x'");
+	fails("flatten non-list", "\\(ts | flatten)\n", "{ \"ts\": [1] }",
+			"t.gtpl:4:8: error: flatten takes a list of lists; item 0 is an integer");
 	renders("plain text", "a \"\\n\\t\\\\\" b\n#define X 1 \\\n\t+ 2\nchar f = '\\f'; /* \\format */\n", "{}",
 			"a \"\\n\\t\\\\\" b\n#define X 1 \\\n\t+ 2\nchar f = '\\f'; /* \\format */\n");
 	renders("no header needed for text", "x\n", "{}", "x\n");

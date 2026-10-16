@@ -262,7 +262,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "SET NULL",
-					"indexed": false
+					"indexed": false,
+					"optional": true,
+					"unique": false
 				},
 				{
 					"columns": ["source_manga"],
@@ -272,7 +274,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -450,7 +454,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -655,7 +661,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": true
 				}
 			],
 			"triggers": []
@@ -1057,7 +1065,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": false
+					"indexed": false,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -1338,7 +1348,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -1410,7 +1422,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": false
+					"indexed": false,
+					"optional": false,
+					"unique": false
 				},
 				{
 					"columns": ["source_manga"],
@@ -1420,7 +1434,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -1492,7 +1508,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": false
+					"indexed": false,
+					"optional": false,
+					"unique": false
 				},
 				{
 					"columns": ["source_manga"],
@@ -1502,7 +1520,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -1574,7 +1594,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				},
 				{
 					"columns": ["tag_source"],
@@ -1584,7 +1606,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": false
+					"indexed": false,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -1701,7 +1725,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -2051,7 +2077,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "CASCADE",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
@@ -2316,7 +2344,9 @@
 					"resolved_parent_columns": ["serial"],
 					"on_update": "NO ACTION",
 					"on_delete": "SET NULL",
-					"indexed": true
+					"indexed": true,
+					"optional": true,
+					"unique": false
 				}
 			],
 			"triggers": []

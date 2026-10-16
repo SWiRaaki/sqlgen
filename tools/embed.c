@@ -44,7 +44,8 @@ int main(int argc, char **argv) {
 		fprintf(out, "static const char text_%d[] = {", i - 3);
 
 		while ((c = fgetc(in)) != EOF) {
-			fprintf(out, "%s0x%02x,", n++ % 16 ? " " : "\n\t", (unsigned)c);
+			/* Bytes above 127 (UTF-8 in a template) do not fit a signed char without the cast. */
+			fprintf(out, c > 127 ? "%s(char)0x%02x," : "%s0x%02x,", n++ % 16 ? " " : "\n\t", (unsigned)c);
 		}
 
 		fprintf(out, "\n\t0x00\n};\n\n");

@@ -1,0 +1,4 @@
+{
+	"schema": { "patches": "../plan/sql/*/" },
+	"targets": [{ "language": "markdown", "dir": "gen", "prefix": "db", "types": {} }]
+}

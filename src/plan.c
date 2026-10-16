@@ -769,6 +769,8 @@ bool sg_plan_build(const sg_model *model, const sg_patchset *patches, const sg_c
 	memset(out, 0, sizeof *out);
 	out->config  = config;
 	out->queries = queries;
+	out->model   = model;
+	out->patchset = patches;
 
 	for (size_t i = 0; i < model->tables.count; ++i) {
 		ok = plan_table(out, model, &model->tables.items[i]) && ok;

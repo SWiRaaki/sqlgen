@@ -2,6 +2,14 @@
 
 #include <string.h>
 
+static const sg_builtin_set *const SETS[] = { &sg_builtin_c, &sg_builtin_markdown, &sg_builtin_mermaid };
+
 const sg_builtin_set *sg_builtin_templates(const char *language) {
-	return strcmp(language, sg_builtin_c.language) == 0 ? &sg_builtin_c : NULL;
+	for (size_t i = 0; i < sizeof SETS / sizeof *SETS; ++i) {
+		if (strcmp(language, SETS[i]->language) == 0) {
+			return SETS[i];
+		}
+	}
+
+	return NULL;
 }

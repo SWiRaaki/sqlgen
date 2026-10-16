@@ -59,19 +59,34 @@ static sg_value *template_data(const sg_plan *plan, const sg_target *target, con
 		return NULL;
 	}
 
+	/* The schema as `sqlgen model` prints it, for templates that describe it rather than wrap it. */
+	sg_model_write_json(plan->model, plan->patchset, NULL, &json);
+
+	sg_value *model = sg_value_from_json(json.data, json.len);
+
+	sg_buf_free(&json);
+
+	if (!model) {
+		sg_error(NULL, 0, 0, "internal: the model is not readable as data");
+		sg_value_free(root);
+		return NULL;
+	}
+
+	sg_map_set(root, "model", model);
+
 	sg_value *t     = sg_map_set(root, "target", sg_value_map());
 	sg_value *types = sg_value_map();
 
 	sg_map_set(t, "language", sg_value_text(target->language));
 	sg_map_set(t, "dir", sg_value_text(target->dir));
-	sg_map_set(t, "prefix", sg_value_text(target->prefix));
+	sg_map_set(t, "prefix", target->prefix ? sg_value_text(target->prefix) : sg_value_null());
 
 	for (size_t i = 0; i < target->types.count; ++i) {
 		sg_map_set(types, target->types.items[i].key, sg_value_text(target->types.items[i].value));
 	}
 
 	sg_map_set(t, "types", types);
-	sg_map_set(root, "prefix", sg_value_text(target->prefix));
+	sg_map_set(root, "prefix", target->prefix ? sg_value_text(target->prefix) : sg_value_null());
 
 	sg_value *generator = sg_map_set(root, "generator", sg_value_map());
 
@@ -149,15 +164,18 @@ static bool render_target(const sg_config *config, const sg_plan *plan, size_t i
 	sg_str_vec                 owned   = {0};
 	sg_template_set           *set     = NULL;
 	sg_value                  *data    = NULL;
-	bool                       ok      = sg_lang_c_check(config, target, index, plan);
+	const sg_language         *lang    = sg_language_find(target->language);
+	bool                       ok      = lang->check(config, target, index, plan);
 
 	if (ok && target->templates) {
 		ok  = read_templates(target->templates, &sources, &owned);
 		set = ok ? sg_templates_parse(sources.items, sources.count, target->templates) : NULL;
 	} else if (ok) {
 		const sg_builtin_set *builtin = sg_builtin_templates(target->language);
+		char                 *label   = sg_format("(built-in %s templates)", target->language);
 
-		set = sg_templates_parse(builtin->templates, builtin->count, "(built-in c templates)");
+		set = sg_templates_parse(builtin->templates, builtin->count, label);
+		free(label);
 	}
 
 	ok = ok && set && (data = template_data(plan, target, config_arg, generated_at)) != NULL;
@@ -165,7 +183,7 @@ static bool render_target(const sg_config *config, const sg_plan *plan, size_t i
 	if (ok) {
 		sg_lang_context context = { data, target };
 		sg_filter       filters[SG_LANG_MAX_FILTERS];
-		size_t          count   = sg_lang_c_filters(filters, &context);
+		size_t          count   = lang->filters(filters, &context);
 
 		ok = sg_templates_render(set, data, filters, count, out);
 	}
@@ -345,7 +363,7 @@ bool sg_export_templates(const char *language, const char *dir) {
 	bool                  ok  = true;
 
 	if (!set) {
-		sg_error(NULL, 0, 0, "no built-in templates for the language '%s'; known: c", language);
+		sg_error(NULL, 0, 0, "no built-in templates for the language '%s'; known: c, markdown, mermaid", language);
 		return false;
 	}
 
@@ -361,7 +379,7 @@ bool sg_export_templates(const char *language, const char *dir) {
 	}
 
 	if (ok) {
-		printf("wrote %zu templates to %s\n", set->count, dir);
+		printf("wrote %zu %s to %s\n", set->count, set->count == 1 ? "template" : "templates", dir);
 	}
 
 	return ok;

@@ -65,13 +65,30 @@ static const field TARGET_C[] = {
 	{ NULL, 0 }
 };
 
+/* Documentation: no names to spell, no types to map. */
+static const field TARGET_DOC[] = {
+	{ "language",      K_TEXT },
+	{ "dir",           K_TEXT },
+	{ "templates",     K_TEXT | K_NULL },
+	{ "confirm_clear", K_BOOL },
+	{ NULL, 0 }
+};
+
+/* Each language's own directory when a target names none, so targets of different languages
+ * never share one by default. The documentation gets directories of its own inside docs/, since a
+ * target clears its directory. */
 static const struct {
 	const char  *name;
 	const field *keys;
+	const char  *dir;
 } LANGUAGES[] = {
-	{ "c", TARGET_C },
-	{ NULL, NULL }
+	{ "c",        TARGET_C,   "gen" },
+	{ "markdown", TARGET_DOC, "docs/schema" },
+	{ "mermaid",  TARGET_DOC, "docs/diagram" },
+	{ NULL, NULL, NULL }
 };
+
+#define KNOWN_LANGUAGES "c, markdown, mermaid"
 
 static const field TYPES[] = {
 	{ "by_name",     K_OBJECT },
@@ -170,8 +187,6 @@ static const struct {
 #define DEFAULT_PATCHES               "sql/*/"
 #define DEFAULT_DOUBLE_QUOTED_STRINGS false
 #define DEFAULT_FOREIGN_KEYS          true
-#define DEFAULT_LANGUAGE              "c"
-#define DEFAULT_TARGET_DIR            "gen"
 #define DEFAULT_CONFIRM_CLEAR         true
 #define DEFAULT_PREFIX                "db"
 #define DEFAULT_EMBED_SCRIPTS         true
@@ -192,12 +207,24 @@ static const char DEFAULT_TEXT[] =
 	"\t},\n"
 	"\t\"targets\": [\n"
 	"\t\t{\n"
-	"\t\t\t\"language\": \"" DEFAULT_LANGUAGE "\",\n"
-	"\t\t\t\"dir\": \"" DEFAULT_TARGET_DIR "\",\n"
+	"\t\t\t\"language\": \"c\",\n"
+	"\t\t\t\"dir\": \"gen\",\n"
 	"\t\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
 	"\t\t\t\"templates\": null,\n"
 	"\t\t\t\"confirm_clear\": true,\n"
 	"\t\t\t\"types\": {}\n"
+	"\t\t},\n"
+	"\t\t{\n"
+	"\t\t\t\"language\": \"markdown\",\n"
+	"\t\t\t\"dir\": \"docs/schema\",\n"
+	"\t\t\t\"templates\": null,\n"
+	"\t\t\t\"confirm_clear\": true\n"
+	"\t\t},\n"
+	"\t\t{\n"
+	"\t\t\t\"language\": \"mermaid\",\n"
+	"\t\t\t\"dir\": \"docs/diagram\",\n"
+	"\t\t\t\"templates\": null,\n"
+	"\t\t\t\"confirm_clear\": true\n"
 	"\t\t}\n"
 	"\t],\n"
 	"\t\"types\": {\n"
@@ -711,26 +738,62 @@ static bool syntax_ok(reader *r, size_t length) {
 	return false;
 }
 
-static void default_target(sg_config *config) {
-	sg_target *target = SG_PUSH(config->targets);
+/* A directory as targets are compared: no `.` segments, no doubled or trailing slashes. */
+static char *normalized_dir(const char *path) {
+	sg_buf out = {0};
 
-	target->language      = sg_xstrdup(DEFAULT_LANGUAGE);
-	target->dir           = sg_path_join(config->dir, DEFAULT_TARGET_DIR);
-	target->prefix        = sg_xstrdup(DEFAULT_PREFIX);
-	target->confirm_clear = DEFAULT_CONFIRM_CLEAR;
+	for (const char *s = path; *s; ) {
+		size_t n = strcspn(s, "/");
+
+		if (n == 0 && s == path) {
+			sg_buf_putc(&out, '/');
+		} else if (n > 0 && !(n == 1 && s[0] == '.')) {
+			if (out.len && out.data[out.len - 1] != '/') {
+				sg_buf_putc(&out, '/');
+			}
+
+			sg_buf_append(&out, s, n);
+		}
+
+		s += n + (s[n] == '/');
+	}
+
+	return out.data ? out.data : sg_xstrdup(".");
+}
+
+static char *target_dir(const sg_config *config, const char *dir) {
+	char *joined = sg_path_join(config->dir, dir);
+	char *clean  = normalized_dir(joined);
+
+	free(joined);
+	return clean;
+}
+
+/* With no `targets`, one target per language, as the written file lists them. */
+static void default_targets(sg_config *config) {
+	for (size_t i = 0; LANGUAGES[i].name; ++i) {
+		sg_target *target = SG_PUSH(config->targets);
+
+		target->language      = sg_xstrdup(LANGUAGES[i].name);
+		target->dir           = target_dir(config, LANGUAGES[i].dir);
+		target->prefix        = strcmp(LANGUAGES[i].name, "c") == 0 ? sg_xstrdup(DEFAULT_PREFIX) : NULL;
+		target->confirm_clear = DEFAULT_CONFIRM_CLEAR;
+	}
 }
 
 static bool read_target(reader *r, const char *fullkey, sg_config *config) {
 	char        *path     = sg_format("%s.language", fullkey);
 	char        *language = text_at(r, path);
 	const field *keys     = NULL;
+	const char  *fallback = NULL;
 	bool         ok       = true;
 
 	free(path);
 
 	for (size_t i = 0; language && LANGUAGES[i].name; ++i) {
 		if (strcmp(LANGUAGES[i].name, language) == 0) {
-			keys = LANGUAGES[i].keys;
+			keys     = LANGUAGES[i].keys;
+			fallback = LANGUAGES[i].dir;
 		}
 	}
 
@@ -740,7 +803,7 @@ static bool read_target(reader *r, const char *fullkey, sg_config *config) {
 	}
 
 	if (!keys) {
-		problem(r, fullkey, ": unknown language '%s'; known: c", language, NULL);
+		problem(r, fullkey, ": unknown language '%s'; known: " KNOWN_LANGUAGES, language, NULL);
 		free(language);
 		return false;
 	}
@@ -757,14 +820,10 @@ static bool read_target(reader *r, const char *fullkey, sg_config *config) {
 
 	key = sg_format("%s.dir", fullkey);
 	char *dir = text_at(r, key);
-	target->dir = sg_path_join(config->dir, dir ? dir : DEFAULT_TARGET_DIR);
+	/* "out", "out/" and "./out" are one directory, which the check for shared directories has to see. */
+	target->dir = target_dir(config, dir ? dir : fallback);
 	free(dir);
 	free(key);
-
-	/* "out" and "out/" are one directory, which the check for shared directories has to see. */
-	for (size_t len = strlen(target->dir); len > 1 && target->dir[len - 1] == '/'; --len) {
-		target->dir[len - 1] = '\0';
-	}
 
 	key = sg_format("%s.templates", fullkey);
 	char *templates = text_at(r, key);
@@ -806,7 +865,7 @@ static bool read_targets(reader *r, sg_config *config, bool present) {
 	bool ok = true;
 
 	if (!present) {
-		default_target(config);
+		default_targets(config);
 		return true;
 	}
 
@@ -820,11 +879,20 @@ static bool read_targets(reader *r, sg_config *config, bool present) {
 
 	sqlite3_finalize(stmt);
 
+	/* Each target clears its directory, so none may hold another's. */
 	for (size_t i = 0; i < config->targets.count; ++i) {
-		for (size_t j = i + 1; j < config->targets.count; ++j) {
-			if (strcmp(config->targets.items[i].dir, config->targets.items[j].dir) == 0) {
+		for (size_t j = 0; j < config->targets.count; ++j) {
+			const char *a   = config->targets.items[i].dir;
+			const char *b   = config->targets.items[j].dir;
+			size_t      len = strlen(a);
+
+			if (i < j && strcmp(a, b) == 0) {
 				sg_error(r->file, 0, 0, "$.targets[%zu] and $.targets[%zu] both write to %s; each target"
-						" clears its directory", i, j, config->targets.items[i].dir);
+						" clears its directory", i, j, a);
+				ok = false;
+			} else if (i != j && strncmp(a, b, len) == 0 && (b[len] == '/' || strcmp(a, "/") == 0) && b[len]) {
+				sg_error(r->file, 0, 0, "$.targets[%zu] writes to %s, inside the directory of $.targets[%zu],"
+						" %s, which that target clears", j, b, i, a);
 				ok = false;
 			}
 		}

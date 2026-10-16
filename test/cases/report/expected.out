@@ -71,7 +71,9 @@
 					"resolved_parent_columns": ["id"],
 					"on_update": "NO ACTION",
 					"on_delete": "NO ACTION",
-					"indexed": true
+					"indexed": true,
+					"optional": false,
+					"unique": false
 				}
 			],
 			"triggers": []
