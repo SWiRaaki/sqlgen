@@ -222,22 +222,25 @@ int db__read_id(sqlite3_stmt *stmt, int column, uint64_t *out) {
 	return db__id(sqlite3_column_int64(stmt, column), out);
 }
 
-int db__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len) {
-	return text ? sqlite3_bind_text64(stmt, index, text, (sqlite3_uint64)len, SQLITE_STATIC, SQLITE_UTF8)
+/* A cursor goes on stepping after the call that bound it returns, so it takes a copy (copy is
+ * nonzero); a statement that finishes within the call reads the caller's bytes. */
+int db__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len, int copy) {
+	return text ? sqlite3_bind_text64(stmt, index, text, (sqlite3_uint64)len, copy ? SQLITE_TRANSIENT : SQLITE_STATIC,
+			SQLITE_UTF8)
 			: sqlite3_bind_null(stmt, index);
 }
 
-int db__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len) {
-	return bytes ? sqlite3_bind_blob64(stmt, index, bytes, (sqlite3_uint64)len, SQLITE_STATIC)
+int db__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len, int copy) {
+	return bytes ? sqlite3_bind_blob64(stmt, index, bytes, (sqlite3_uint64)len, copy ? SQLITE_TRANSIENT : SQLITE_STATIC)
 			: sqlite3_bind_null(stmt, index);
 }
 
-int db__bind_value(sqlite3_stmt *stmt, int index, const db_value *value) {
+int db__bind_value(sqlite3_stmt *stmt, int index, const db_value *value, int copy) {
 	switch (value ? value->type : SQLITE_NULL) {
 	case SQLITE_INTEGER: return sqlite3_bind_int64(stmt, index, (sqlite3_int64)value->integer);
 	case SQLITE_FLOAT:   return sqlite3_bind_double(stmt, index, value->real);
-	case SQLITE_TEXT:    return db__bind_text(stmt, index, value->text.ptr, value->text.len);
-	case SQLITE_BLOB:    return db__bind_blob(stmt, index, value->blob.ptr ? (const void *)value->blob.ptr : "", value->blob.len);
+	case SQLITE_TEXT:    return db__bind_text(stmt, index, value->text.ptr, value->text.len, copy);
+	case SQLITE_BLOB:    return db__bind_blob(stmt, index, value->blob.ptr ? (const void *)value->blob.ptr : "", value->blob.len, copy);
 	default:             return sqlite3_bind_null(stmt, index);
 	}
 }
@@ -447,11 +450,11 @@ int db_add_session(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -950,9 +953,9 @@ int db__read_blob(sqlite3_stmt *stmt, int column, db_blob *out);
 int db__read_value(sqlite3_stmt *stmt, int column, db_value *out);
 int db__read_id(sqlite3_stmt *stmt, int column, uint64_t *out);
 
-int db__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len);
-int db__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len);
-int db__bind_value(sqlite3_stmt *stmt, int index, const db_value *value);
+int db__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len, int copy);
+int db__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len, int copy);
+int db__bind_value(sqlite3_stmt *stmt, int index, const db_value *value, int copy);
 int db__bind_id(sqlite3_stmt *stmt, int index, uint64_t id);
 
 #endif
@@ -1384,7 +1387,7 @@ int db_search_users(db_ctx *ctx,
 
 	sqlite3_stmt *stmt = out->stmt;
 
-	if ((rc = db__bind_text(stmt, 1, p_pattern, p_pattern_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_pattern, p_pattern_len, 1)) != SQLITE_OK) {
 		return db__cursor_fail(out, rc);
 	}
 
@@ -1544,7 +1547,7 @@ int db_sessions_get_by_token_hash(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_token_hash, p_token_hash_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_token_hash, p_token_hash_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -1598,7 +1601,7 @@ int db_sessions_list_by_user_and_family(db_ctx *ctx,
 		return db__cursor_fail(out, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len, 1)) != SQLITE_OK) {
 		return db__cursor_fail(out, rc);
 	}
 
@@ -1627,11 +1630,11 @@ int db_sessions_insert(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -1675,11 +1678,11 @@ int db_sessions_update_by_key(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -1743,7 +1746,7 @@ int db_sessions_delete_by_token_hash(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_token_hash, p_token_hash_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_token_hash, p_token_hash_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -1800,7 +1803,7 @@ int db_sessions_delete_by_user_and_family(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -1834,11 +1837,11 @@ int db_sessions_upsert_on_token_hash(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_family, p_family_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_token_hash, p_token_hash_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2027,7 +2030,7 @@ int db_setting_get_by_key(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2055,11 +2058,11 @@ int db_setting_insert(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_value, p_value_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_value, p_value_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2082,11 +2085,11 @@ int db_setting_update_by_key(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_value, p_value_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_value, p_value_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_name, p_name_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_name, p_name_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2112,7 +2115,7 @@ int db_setting_delete_by_key(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2139,11 +2142,11 @@ int db_setting_upsert_on_key(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_name, p_name_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_value, p_value_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_value, p_value_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2424,7 +2427,7 @@ int db_tag_get_by_slug(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_slug, p_slug_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_slug, p_slug_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2458,7 +2461,7 @@ int db_tag_insert(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_slug, p_slug_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_slug, p_slug_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2491,7 +2494,7 @@ int db_tag_update_by_key(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_slug, p_slug_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_slug, p_slug_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2551,7 +2554,7 @@ int db_tag_delete_by_slug(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_slug, p_slug_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_slug, p_slug_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2583,7 +2586,7 @@ int db_tag_upsert_on_key(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_slug, p_slug_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_slug, p_slug_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2619,7 +2622,7 @@ int db_tag_upsert_on_slug(db_ctx *ctx,
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_slug, p_slug_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_slug, p_slug_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -2951,7 +2954,7 @@ int db_user_by_name(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3607,7 +3610,7 @@ int db_users_get_by_username(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3635,7 +3638,7 @@ int db_users_get_by_email(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_email, p_email_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_email, p_email_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3663,7 +3666,7 @@ int db_users_list_by_role(db_ctx *ctx,
 
 	sqlite3_stmt *stmt = out->stmt;
 
-	if ((rc = db__bind_text(stmt, 1, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_role, p_role_len, 1)) != SQLITE_OK) {
 		return db__cursor_fail(out, rc);
 	}
 
@@ -3689,19 +3692,19 @@ int db_users_insert(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3742,19 +3745,19 @@ int db_users_update_by_key(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3818,7 +3821,7 @@ int db_users_delete_by_username(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3844,7 +3847,7 @@ int db_users_delete_by_email(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_email, p_email_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_email, p_email_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3870,7 +3873,7 @@ int db_users_delete_by_role(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_role, p_role_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3901,19 +3904,19 @@ int db_users_upsert_on_username(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -3952,19 +3955,19 @@ int db_users_upsert_on_email(db_ctx *ctx,
 		return rc;
 	}
 
-	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_username, p_username_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 2, p_email, p_email_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 3, p_display_text, p_display_text_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
-	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 4, p_role, p_role_len, 0)) != SQLITE_OK) {
 		return db__finish(stmt, rc);
 	}
 
@@ -4120,7 +4123,7 @@ int db_users_by_role(db_ctx *ctx,
 
 	sqlite3_stmt *stmt = out->stmt;
 
-	if ((rc = db__bind_text(stmt, 1, p_role, p_role_len)) != SQLITE_OK) {
+	if ((rc = db__bind_text(stmt, 1, p_role, p_role_len, 1)) != SQLITE_OK) {
 		return db__cursor_fail(out, rc);
 	}
 

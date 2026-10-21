@@ -108,6 +108,7 @@ static bool describes_anything(const sg_config *config, const sg_target *target,
 const sg_language *sg_language_find(const char *name) {
 	static const sg_language LANGUAGES[] = {
 		{ "c",        sg_lang_c_filters,        sg_lang_c_check },
+		{ "cpp",      sg_lang_cpp_filters,      sg_lang_cpp_check },
 		{ "markdown", sg_lang_markdown_filters, describes_anything },
 		{ "mermaid",  sg_lang_mermaid_filters,  describes_anything },
 	};

@@ -1,0 +1,2 @@
+q/migrate.sql: error: the query q/migrate.sql would be the namespace db::migrate in C++, which the runtime already uses
+q/users.sql: error: the query q/users.sql would be the namespace db::users in C++, which the table users already uses

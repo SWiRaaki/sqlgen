@@ -12,21 +12,28 @@
 	"targets": [
 		{
 			"language": "c",
-			"dir": "gen",
+			"dir": "gen/c",
 			"prefix": "db",
 			"templates": null,
 			"confirm_clear": true,
 			"types": {}
 		},
 		{
+			"language": "cpp",
+			"dir": "gen/cpp",
+			"prefix": "db",
+			"templates": null,
+			"confirm_clear": true
+		},
+		{
 			"language": "markdown",
-			"dir": "docs/schema",
+			"dir": "gen/schema",
 			"templates": null,
 			"confirm_clear": true
 		},
 		{
 			"language": "mermaid",
-			"dir": "docs/diagram",
+			"dir": "gen/diagram",
 			"templates": null,
 			"confirm_clear": true
 		}

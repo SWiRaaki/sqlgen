@@ -12,14 +12,15 @@
    value as a pointer (NULL is SQL NULL), anything else optional as a pointer (NULL is SQL NULL, or
    the column's default or a new rowid), anything else by value. *\
 \define param(c, optional) {\if (c | storage == "text") {const char *p_\(c.words | snake), size_t p_\(c.words | snake)_len\} \elif (c | storage == "blob") {const void *p_\(c.words | snake), size_t p_\(c.words | snake)_len\} \elif (c | storage == "value") {const \(prefix)_value *p_\(c.words | snake)\} \elif (optional or c.nullable) {const \(c | ctype) *p_\(c.words | snake)\} \else {\(c | ctype) p_\(c.words | snake)\}\}
-\* Binding a parameter to placeholder n; on an error, a "cursor" is closed and a "statement" reset. *\
+\* Binding a parameter to placeholder n; on an error, a "cursor" is closed and a "statement" reset.
+   A cursor's text and blobs are copied: it steps on after the call that bound them returns. *\
 \define bind(c, optional, n, fail) {
 \if (c | storage == "text") {
-	if ((rc = \(prefix)__bind_text(stmt, \(n), p_\(c.words | snake), p_\(c.words | snake)_len)) != SQLITE_OK) {
+	if ((rc = \(prefix)__bind_text(stmt, \(n), p_\(c.words | snake), p_\(c.words | snake)_len, \if (fail == "cursor") {1\} \else {0\})) != SQLITE_OK) {
 \} \elif (c | storage == "blob") {
-	if ((rc = \(prefix)__bind_blob(stmt, \(n), p_\(c.words | snake), p_\(c.words | snake)_len)) != SQLITE_OK) {
+	if ((rc = \(prefix)__bind_blob(stmt, \(n), p_\(c.words | snake), p_\(c.words | snake)_len, \if (fail == "cursor") {1\} \else {0\})) != SQLITE_OK) {
 \} \elif (c | storage == "value") {
-	if ((rc = \(prefix)__bind_value(stmt, \(n), p_\(c.words | snake))) != SQLITE_OK) {
+	if ((rc = \(prefix)__bind_value(stmt, \(n), p_\(c.words | snake), \if (fail == "cursor") {1\} \else {0\})) != SQLITE_OK) {
 \} \elif (c | storage == "id" and (optional or c.nullable)) {
 	if ((rc = p_\(c.words | snake) ? \(prefix)__bind_id(stmt, \(n), p_\(c.words | snake)->v) : sqlite3_bind_null(stmt, \(n))) != SQLITE_OK) {
 \} \elif (c | storage == "id") {

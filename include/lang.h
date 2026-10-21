@@ -50,6 +50,22 @@ size_t sg_lang_c_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *co
 bool sg_lang_c_check(const sg_config *config, const sg_target *target, size_t index, const sg_plan *plan);
 
 /**
+ * @brief C++'s filters: `storage`, `cstring`, `cstrings` and `cbytes` as for C, and
+ *   - `cppname`   as `cname`, with C++'s keywords as well;
+ *   - `cpptype`   a column's C++ type: its typed id, `int64_t`, `double`, `std::string`,
+ *                 `std::vector<unsigned char>` or `Value`; a logical type from `types` is spelt by
+ *                 its storage;
+ *   - `idtype`    a table's typed id type inside the prefix's namespace, `<Table><KeyColumn>`.
+ */
+size_t sg_lang_cpp_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *context);
+
+/**
+ * @brief Whether the plan can be spelled in C++: every table and query becomes a namespace inside
+ *        the prefix's, so no two may share a name, nor take one the runtime uses.
+ */
+bool sg_lang_cpp_check(const sg_config *config, const sg_target *target, size_t index, const sg_plan *plan);
+
+/**
  * @brief Markdown's filters:
  *   - `mdcell`   a text fit for a table cell: `|` escaped, line breaks as spaces;
  *   - `anchor`   a heading's text as the anchor GitHub and most renderers give it: lowercase,

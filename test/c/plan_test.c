@@ -274,6 +274,20 @@ int main(void) {
 
 	db_cursor_close(&outer);
 	CHECK(count == 2);
+
+	/* A cursor keeps what it was bound with, though the caller's buffer changes before it steps. */
+	char family[] = "f1";
+
+	CHECK(db_sessions_list_by_user_and_family(ctx, ada, family, 2, &outer) == SQLITE_OK);
+	memcpy(family, "zz", 2);
+	count = 0;
+
+	while (db_sessions_next(&outer, &s) == SQLITE_ROW) {
+		++count;
+	}
+
+	db_cursor_close(&outer);
+	CHECK(count == 2);
 	CHECK(db_sessions_get_by_token_hash(ctx, "h2", 2, &s) == SQLITE_ROW && s.expires_at == now + 2);
 	CHECK(db_sessions_delete_by_user_and_family(ctx, ada, "f1", 2) == SQLITE_OK);
 	CHECK(db_sessions_delete_by_user_and_family(ctx, ada, "f1", 2) == SQLITE_DONE);

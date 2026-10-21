@@ -6,11 +6,14 @@ has a directory of templates here, compiled into sqlgen:
 | Language | Produces |
 |---|---|
 | `c` | a C API over the schema: row types, typed ids, statements, queries, migration |
+| `cpp` | the same in C++, on its own (it does not wrap the C): C++11 and every later standard |
 | `markdown` | `schema.md`: every table, view and query, and the patches |
 | `mermaid` | `schema.mmd`: an entity-relationship diagram of the tables and their foreign keys |
 
 A `markdown` or `mermaid` target takes only `language`, `dir`, `templates` and `confirm_clear`.
-Without a `dir`, each language writes to its own: `gen`, `docs/schema` and `docs/diagram`. A
+A `cpp` target takes `language`, `dir`, `templates`, `confirm_clear` and `prefix` (its namespace);
+logical types from `types` are spelt by their storage, so it maps none. Without a `dir`, each
+language writes to its own, side by side: `gen/c`, `gen/cpp`, `gen/schema` and `gen/diagram`. A
 target clears its directory before writing, so no target may write inside another's.
 
 To change the output, export the built-in set, edit it, and point a target at your copy:
@@ -302,6 +305,14 @@ For C:
 | `cstring` | a C string literal, quotes included |
 | `cstrings` | a list of string literals, one per line of the text |
 | `cbytes` | lines of a byte array initialiser, for text longer than 4095 bytes |
+
+For C++, `storage`, `cstring`, `cstrings` and `cbytes` as for C, and:
+
+| Filter | Result |
+|---|---|
+| `cppname` | as `cname`, avoiding C++'s keywords too |
+| `cpptype` | a column's C++ type: its id type, `int64_t`, `double`, `std::string`, `std::vector<unsigned char>` or `Value` |
+| `idtype` | a table's typed id type: `UsersSerial` |
 
 For Markdown:
 

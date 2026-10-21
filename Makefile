@@ -66,7 +66,7 @@ $(OUT)/%.o: src/%.c $(HDR) Makefile | $(OUT)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) -c $< -o $@
 
 # The built-in templates: each file under templates/<language>/ is compiled in as a byte array.
-LANGUAGES := c markdown mermaid
+LANGUAGES := c cpp markdown mermaid
 BUILTIN_O := $(LANGUAGES:%=$(OUT)/builtin_%.o)
 
 $(OUT)/embed: tools/embed.c | $(OUT)
@@ -116,6 +116,14 @@ GEN_C   := test/cases/generate-c/gen
 GEN_CC  := $(CC) $(CSTD) $(OPT) -Wall -Wextra -pedantic -Wconversion -Wsign-conversion -Wshadow \
            -Wstrict-prototypes -Wmissing-prototypes -Wcast-qual -Werror -I$(GEN_C) $(CPPFLAGS)
 
+# The C++ that test/cases/generate-cpp generates: built and run as C++11, the oldest it is written
+# for, checked against every newer standard, and test/cpp/wrong_types.cpp refused case by case.
+CXX      ?= c++
+GEN_CPP  := test/cases/generate-cpp/gen
+GEN_CXX  := $(CXX) $(OPT) -Wall -Wextra -pedantic -Wconversion -Wsign-conversion -Wshadow -Wold-style-cast \
+            -Wcast-qual -Wzero-as-null-pointer-constant -Werror -I$(GEN_CPP) -Ivendor/sqlite3
+CPP_STDS := c++14 c++17 c++20 c++23
+
 test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(OUT)/config_test $(OUT)/mkdb \
 		$(OUT)/bytecode_test
 	$(OUT)/semver_test
@@ -130,6 +138,13 @@ test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(O
 	@if $(GEN_CC) -c test/c/wrong_id.c -o /dev/null 2>/dev/null; then \
 		echo "wrong_id: an id of one table was accepted for another"; exit 1; \
 	else echo "wrong_id: refused, as it must be"; fi
+	$(GEN_CXX) -std=c++11 $(GEN_CPP)/*.cpp test/cpp/plan_test.cpp $(SQLITE_O) -o $(OUT)/plan_test_cpp $(LIBS)
+	$(OUT)/plan_test_cpp
+	@for std in $(CPP_STDS); do for f in $(GEN_CPP)/*.cpp; do \
+		$(GEN_CXX) -std=$$std -fsyntax-only $$f || exit 1; done; done; echo "c++: $(CPP_STDS) compile"
+	$(GEN_CXX) -std=c++11 -DWRONG=0 -fsyntax-only test/cpp/wrong_types.cpp
+	@for n in 1 2 3; do if $(GEN_CXX) -std=c++11 -DWRONG=$$n -fsyntax-only test/cpp/wrong_types.cpp 2>/dev/null; then \
+		echo "wrong_types: case $$n compiled"; exit 1; fi; done; echo "wrong_types: every case refused, as it must be"
 
 asan:
 	$(MAKE) BUILD=asan test

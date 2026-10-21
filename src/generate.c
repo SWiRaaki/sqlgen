@@ -363,7 +363,7 @@ bool sg_export_templates(const char *language, const char *dir) {
 	bool                  ok  = true;
 
 	if (!set) {
-		sg_error(NULL, 0, 0, "no built-in templates for the language '%s'; known: c, markdown, mermaid", language);
+		sg_error(NULL, 0, 0, "no built-in templates for the language '%s'; known: c, cpp, markdown, mermaid", language);
 		return false;
 	}
 

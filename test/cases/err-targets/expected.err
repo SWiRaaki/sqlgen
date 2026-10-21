@@ -3,6 +3,6 @@ sqlgen.json: error: $.targets[0].types."timestamp-ms": 'timestamp-ms' is not a l
 sqlgen.json: error: $.targets[0].types.money must not be empty
 sqlgen.json: error: $.targets[2].namespace: unknown key
 sqlgen.json: error: $.targets[3]: language is required
-sqlgen.json: error: $.targets[4]: unknown language 'odin'; known: c, markdown, mermaid
+sqlgen.json: error: $.targets[4]: unknown language 'odin'; known: c, cpp, markdown, mermaid
 sqlgen.json: error: $.targets[0] and $.targets[1] both write to out; each target clears its directory
 sqlgen.json: error: $.types.by_name."*_at": 'timestamp ms' is not a logical type name; use letters, digits and _

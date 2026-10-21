@@ -36,9 +36,9 @@ int \(prefix)__read_blob(sqlite3_stmt *stmt, int column, \(prefix)_blob *out);
 int \(prefix)__read_value(sqlite3_stmt *stmt, int column, \(prefix)_value *out);
 int \(prefix)__read_id(sqlite3_stmt *stmt, int column, uint64_t *out);
 
-int \(prefix)__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len);
-int \(prefix)__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len);
-int \(prefix)__bind_value(sqlite3_stmt *stmt, int index, const \(prefix)_value *value);
+int \(prefix)__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len, int copy);
+int \(prefix)__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len, int copy);
+int \(prefix)__bind_value(sqlite3_stmt *stmt, int index, const \(prefix)_value *value, int copy);
 int \(prefix)__bind_id(sqlite3_stmt *stmt, int index, uint64_t id);
 
 #endif

@@ -13,6 +13,17 @@ static const char *const KEYWORDS[] = {
 	"_Generic", "_Noreturn", "_Static_assert", "_Thread_local", "bool", "true", "false", "NULL", NULL
 };
 
+/* C++ adds these to C's (C's own _Bool and the like are reserved there too, and stay listed). */
+static const char *const CPP_KEYWORDS[] = {
+	"alignas", "alignof", "and", "and_eq", "asm", "bitand", "bitor", "catch", "char16_t", "char32_t",
+	"char8_t", "class", "co_await", "co_return", "co_yield", "compl", "concept", "const_cast",
+	"consteval", "constexpr", "constinit", "decltype", "delete", "dynamic_cast", "explicit", "export",
+	"friend", "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or",
+	"or_eq", "private", "protected", "public", "reinterpret_cast", "requires", "static_assert",
+	"static_cast", "template", "this", "thread_local", "throw", "try", "typeid", "typename", "using",
+	"virtual", "wchar_t", "xor", "xor_eq", "final", "override", "std", NULL
+};
+
 static sg_value *fail(char **error, const char *fmt, ...) SG_PRINTF(2, 3);
 
 static sg_value *fail(char **error, const char *fmt, ...) {
@@ -58,15 +69,23 @@ static bool snake(const sg_value *v, sg_buf *out) {
 	return true;
 }
 
-static sg_value *cname(const sg_value *in, sg_value *const *args, size_t count, void *user, char **error) {
-	sg_buf out = {0};
+static bool listed(const char *const *list, const char *word) {
+	for (size_t i = 0; list[i]; ++i) {
+		if (strcmp(word, list[i]) == 0) {
+			return true;
+		}
+	}
 
-	(void)args;
-	(void)user;
+	return false;
+}
+
+/* Snake case, `_` before a leading digit, `_` after a keyword of C (and of C++ when @p cpp). */
+static sg_value *identifier(const sg_value *in, size_t count, bool cpp, char **error) {
+	sg_buf out = {0};
 
 	if (count || !snake(in, &out)) {
 		sg_buf_free(&out);
-		return fail(error, "cname takes a text or a list of words, and no arguments");
+		return fail(error, "%s takes a text or a list of words, and no arguments", cpp ? "cppname" : "cname");
 	}
 
 	if (!out.data) {
@@ -80,13 +99,23 @@ static sg_value *cname(const sg_value *in, sg_value *const *args, size_t count, 
 		return sg_value_text_owned(named);
 	}
 
-	for (size_t i = 0; KEYWORDS[i]; ++i) {
-		if (strcmp(out.data, KEYWORDS[i]) == 0) {
-			sg_buf_putc(&out, '_');
-		}
+	if (listed(KEYWORDS, out.data) || (cpp && listed(CPP_KEYWORDS, out.data))) {
+		sg_buf_putc(&out, '_');
 	}
 
 	return sg_value_text_owned(out.data);
+}
+
+static sg_value *cname(const sg_value *in, sg_value *const *args, size_t count, void *user, char **error) {
+	(void)args;
+	(void)user;
+	return identifier(in, count, false, error);
+}
+
+static sg_value *cppname(const sg_value *in, sg_value *const *args, size_t count, void *user, char **error) {
+	(void)args;
+	(void)user;
+	return identifier(in, count, true, error);
 }
 
 static const char *text_member(const sg_value *map, const char *key) {
@@ -127,7 +156,26 @@ static const char *storage_of(const sg_lang_context *ctx, const sg_value *column
 	return strcmp(affinity, "integer") == 0 ? "int" : affinity;
 }
 
-/* <prefix>_<table>_<key column>, for the table @p table. */
+static void pascal_word(const char *word, void *user) {
+	sg_buf *out = user;
+
+	sg_buf_putc(out, (char)(word[0] >= 'a' && word[0] <= 'z' ? word[0] - 'a' + 'A' : word[0]));
+	sg_buf_puts(out, word + 1);
+}
+
+static void pascal(const sg_value *words, sg_buf *out) {
+	for (size_t i = 0; words && i < words->items.count; ++i) {
+		if (words->items.items[i]->kind == SG_V_TEXT) {
+			sg_split_words(words->items.items[i]->text, pascal_word, out);
+		}
+	}
+}
+
+static bool is_cpp(const sg_lang_context *ctx) {
+	return strcmp(ctx->target->language, "cpp") == 0;
+}
+
+/* C: <prefix>_<table>_<key column>. C++, inside the prefix's namespace: <Table><KeyColumn>. */
 static char *id_type(const sg_lang_context *ctx, const sg_value *table, char **error) {
 	const char     *key     = text_member(table, "id_column");
 	const sg_value *columns = sg_map_get(table, "columns");
@@ -144,6 +192,12 @@ static char *id_type(const sg_lang_context *ctx, const sg_value *table, char **e
 		if (strcmp(text_member(c, "name"), key) == 0) {
 			sg_buf table_part  = {0};
 			sg_buf column_part = {0};
+
+			if (is_cpp(ctx)) {
+				pascal(sg_map_get(table, "words"), &out);
+				pascal(sg_map_get(c, "words"), &out);
+				continue;
+			}
 
 			snake(sg_map_get(table, "words"), &table_part);
 			snake(sg_map_get(c, "words"), &column_part);
@@ -211,6 +265,45 @@ static sg_value *ctype(const sg_value *in, sg_value *const *args, size_t count, 
 	}
 
 	return sg_value_text_owned(sg_format("%s_%s", ctx->target->prefix, kind));
+}
+
+/* A column's C++ type: what its storage holds. A logical type from `types` is spelt by its storage;
+ * a project wanting its own types changes the templates. */
+static sg_value *cpptype(const sg_value *in, sg_value *const *args, size_t count, void *user, char **error) {
+	const sg_lang_context *ctx = user;
+
+	(void)args;
+
+	if (count || in->kind != SG_V_MAP) {
+		return fail(error, "cpptype takes a column and no arguments");
+	}
+
+	const char *kind = storage_of(ctx, in);
+
+	if (strcmp(kind, "id") == 0) {
+		const sg_value *owner = table_named(ctx->root, text_member(in, "id_of"));
+
+		if (!owner) {
+			return fail(error, "no table %s for the id of %s", text_member(in, "id_of"), text_member(in, "name"));
+		}
+
+		char *type = id_type(ctx, owner, error);
+
+		return type ? sg_value_text_owned(type) : NULL;
+	}
+
+	static const char *const TYPES[][2] = {
+		{ "int", "int64_t" }, { "real", "double" }, { "text", "std::string" },
+		{ "blob", "std::vector<unsigned char>" }, { "value", "Value" }
+	};
+
+	for (size_t i = 0; i < sizeof TYPES / sizeof TYPES[0]; ++i) {
+		if (strcmp(kind, TYPES[i][0]) == 0) {
+			return sg_value_text(TYPES[i][1]);
+		}
+	}
+
+	return fail(error, "no C++ type for the storage %s", kind);
 }
 
 static sg_value *idtype(const sg_value *in, sg_value *const *args, size_t count, void *user, char **error) {
@@ -332,6 +425,22 @@ size_t sg_lang_c_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *co
 		{ "cname",    cname,    context },
 		{ "storage",  storage,  context },
 		{ "ctype",    ctype,    context },
+		{ "idtype",   idtype,   context },
+		{ "cstring",  cstring,  context },
+		{ "cstrings", cstrings, context },
+		{ "cbytes",   cbytes,   context },
+	};
+	size_t count = sizeof filters / sizeof filters[0];
+
+	memcpy(out, filters, sizeof filters);
+	return count;
+}
+
+size_t sg_lang_cpp_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *context) {
+	const sg_filter filters[] = {
+		{ "cppname",  cppname,  context },
+		{ "storage",  storage,  context },
+		{ "cpptype",  cpptype,  context },
 		{ "idtype",   idtype,   context },
 		{ "cstring",  cstring,  context },
 		{ "cstrings", cstrings, context },
@@ -490,5 +599,72 @@ bool sg_lang_c_check(const sg_config *config, const sg_target *target, size_t in
 		}
 	}
 
+	return ok;
+}
+
+/* A table's or query's namespace: its words in snake case, as `cppname` spells them. */
+static char *cpp_namespace(const sg_words *words) {
+	char *name = words_snake(words, "");
+
+	if (name[0] >= '0' && name[0] <= '9') {
+		char *named = sg_format("_%s", name);
+
+		free(name);
+		name = named;
+	}
+
+	if (listed(KEYWORDS, name) || listed(CPP_KEYWORDS, name)) {
+		char *named = sg_format("%s_", name);
+
+		free(name);
+		name = named;
+	}
+
+	return name;
+}
+
+bool sg_lang_cpp_check(const sg_config *config, const sg_target *target, size_t index, const sg_plan *plan) {
+	static const char *const RUNTIME[] = {
+		"detail", "migrate", "systables", "patches", "patch_count", "schema_hash", NULL
+	};
+	c_names names = {0};
+	bool    ok    = true;
+
+	(void)config;
+	(void)index;
+
+	for (size_t i = 0; RUNTIME[i]; ++i) {
+		add_name(&names, sg_xstrdup(RUNTIME[i]), "runtime", NULL);
+	}
+
+	for (size_t t = 0; t < plan->tables.count; ++t) {
+		add_name(&names, cpp_namespace(&plan->tables.items[t].words), "table", plan->tables.items[t].table->name);
+	}
+
+	for (size_t q = 0; plan->queries && q < plan->queries->count; ++q) {
+		add_name(&names, cpp_namespace(&plan->queries->items[q].words), "query", plan->queries->items[q].path);
+	}
+
+	/* Two tables can differ only in the case of a letter, which their words do not keep. */
+	for (size_t i = 0; i < names.count; ++i) {
+		for (size_t j = 0; j < i; ++j) {
+			if (strcmp(names.items[i].name, names.items[j].name) == 0 && strcmp(names.items[i].kind, "runtime") != 0) {
+				const c_name *taken = &names.items[j];
+
+				sg_error(strcmp(names.items[i].kind, "query") == 0 ? names.items[i].owner : NULL, 0, 0,
+						"the %s %s would be the namespace %s::%s in C++, which the %s%s%s already uses",
+						names.items[i].kind, names.items[i].owner, target->prefix, names.items[i].name, taken->kind,
+						taken->owner ? " " : "", taken->owner ? taken->owner : "");
+				ok = false;
+				break;
+			}
+		}
+	}
+
+	for (size_t i = 0; i < names.count; ++i) {
+		free(names.items[i].name);
+	}
+
+	free(names.items);
 	return ok;
 }

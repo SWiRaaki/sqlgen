@@ -65,6 +65,16 @@ static const field TARGET_C[] = {
 	{ NULL, 0 }
 };
 
+/* C++ spells logical types by their storage, so it maps none. */
+static const field TARGET_CPP[] = {
+	{ "language",      K_TEXT },
+	{ "dir",           K_TEXT },
+	{ "templates",     K_TEXT | K_NULL },
+	{ "confirm_clear", K_BOOL },
+	{ "prefix",        K_TEXT },
+	{ NULL, 0 }
+};
+
 /* Documentation: no names to spell, no types to map. */
 static const field TARGET_DOC[] = {
 	{ "language",      K_TEXT },
@@ -75,20 +85,22 @@ static const field TARGET_DOC[] = {
 };
 
 /* Each language's own directory when a target names none, so targets of different languages
- * never share one by default. The documentation gets directories of its own inside docs/, since a
- * target clears its directory. */
+ * never share one by default: siblings under gen/, so none is inside another, which a target
+ * clearing its directory would wipe. */
 static const struct {
 	const char  *name;
 	const field *keys;
 	const char  *dir;
+	bool         listed;   //!< One of the targets a configuration without `targets` has.
 } LANGUAGES[] = {
-	{ "c",        TARGET_C,   "gen" },
-	{ "markdown", TARGET_DOC, "docs/schema" },
-	{ "mermaid",  TARGET_DOC, "docs/diagram" },
-	{ NULL, NULL, NULL }
+	{ "c",        TARGET_C,   "gen/c",       true },
+	{ "cpp",      TARGET_CPP, "gen/cpp",     true },
+	{ "markdown", TARGET_DOC, "gen/schema",  true },
+	{ "mermaid",  TARGET_DOC, "gen/diagram", true },
+	{ NULL, NULL, NULL, false }
 };
 
-#define KNOWN_LANGUAGES "c, markdown, mermaid"
+#define KNOWN_LANGUAGES "c, cpp, markdown, mermaid"
 
 static const field TYPES[] = {
 	{ "by_name",     K_OBJECT },
@@ -208,21 +220,28 @@ static const char DEFAULT_TEXT[] =
 	"\t\"targets\": [\n"
 	"\t\t{\n"
 	"\t\t\t\"language\": \"c\",\n"
-	"\t\t\t\"dir\": \"gen\",\n"
+	"\t\t\t\"dir\": \"gen/c\",\n"
 	"\t\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
 	"\t\t\t\"templates\": null,\n"
 	"\t\t\t\"confirm_clear\": true,\n"
 	"\t\t\t\"types\": {}\n"
 	"\t\t},\n"
 	"\t\t{\n"
+	"\t\t\t\"language\": \"cpp\",\n"
+	"\t\t\t\"dir\": \"gen/cpp\",\n"
+	"\t\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
+	"\t\t\t\"templates\": null,\n"
+	"\t\t\t\"confirm_clear\": true\n"
+	"\t\t},\n"
+	"\t\t{\n"
 	"\t\t\t\"language\": \"markdown\",\n"
-	"\t\t\t\"dir\": \"docs/schema\",\n"
+	"\t\t\t\"dir\": \"gen/schema\",\n"
 	"\t\t\t\"templates\": null,\n"
 	"\t\t\t\"confirm_clear\": true\n"
 	"\t\t},\n"
 	"\t\t{\n"
 	"\t\t\t\"language\": \"mermaid\",\n"
-	"\t\t\t\"dir\": \"docs/diagram\",\n"
+	"\t\t\t\"dir\": \"gen/diagram\",\n"
 	"\t\t\t\"templates\": null,\n"
 	"\t\t\t\"confirm_clear\": true\n"
 	"\t\t}\n"
@@ -769,14 +788,18 @@ static char *target_dir(const sg_config *config, const char *dir) {
 	return clean;
 }
 
-/* With no `targets`, one target per language, as the written file lists them. */
+/* With no `targets`, the ones the written file lists. */
 static void default_targets(sg_config *config) {
 	for (size_t i = 0; LANGUAGES[i].name; ++i) {
+		if (!LANGUAGES[i].listed) {
+			continue;
+		}
+
 		sg_target *target = SG_PUSH(config->targets);
 
 		target->language      = sg_xstrdup(LANGUAGES[i].name);
 		target->dir           = target_dir(config, LANGUAGES[i].dir);
-		target->prefix        = strcmp(LANGUAGES[i].name, "c") == 0 ? sg_xstrdup(DEFAULT_PREFIX) : NULL;
+		target->prefix        = LANGUAGES[i].keys == TARGET_DOC ? NULL : sg_xstrdup(DEFAULT_PREFIX);
 		target->confirm_clear = DEFAULT_CONFIRM_CLEAR;
 	}
 }
@@ -843,7 +866,7 @@ static bool read_target(reader *r, const char *fullkey, sg_config *config) {
 	free(types);
 	free(key);
 
-	if (strcmp(language, "c") == 0) {
+	if (strcmp(language, "c") == 0 || strcmp(language, "cpp") == 0) {
 		key = sg_format("%s.prefix", fullkey);
 		target->prefix = text_at(r, key);
 

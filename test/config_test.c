@@ -46,9 +46,9 @@ static void defaults_agree(void) {
 			&& same(written.patch_patterns.items[0], empty.patch_patterns.items[0]), "patches differ");
 	expect(written.double_quoted_strings == empty.double_quoted_strings, "double_quoted_strings differs");
 	expect(written.foreign_keys == empty.foreign_keys, "foreign_keys differs");
-	expect(written.targets.count == 3 && empty.targets.count == 3, "the default targets differ");
+	expect(written.targets.count == 4 && empty.targets.count == 4, "the default targets differ");
 
-	for (size_t i = 0; i < 3 && written.targets.count == 3 && empty.targets.count == 3; ++i) {
+	for (size_t i = 0; i < 4 && written.targets.count == 4 && empty.targets.count == 4; ++i) {
 		const sg_target *w = &written.targets.items[i];
 		const sg_target *e = &empty.targets.items[i];
 
@@ -57,16 +57,19 @@ static void defaults_agree(void) {
 				&& w->types.count == e->types.count, "a key of a default target differs");
 	}
 
-	if (empty.targets.count == 3) {
-		const sg_target *c  = &empty.targets.items[0];
-		const sg_target *md = &empty.targets.items[1];
-		const sg_target *mm = &empty.targets.items[2];
+	if (empty.targets.count == 4) {
+		const sg_target *c   = &empty.targets.items[0];
+		const sg_target *cpp = &empty.targets.items[1];
+		const sg_target *md  = &empty.targets.items[2];
+		const sg_target *mm  = &empty.targets.items[3];
 
-		expect(same(c->language, "c") && strstr(c->dir, "gen") && same(c->prefix, "db") && !c->templates
+		expect(same(c->language, "c") && strstr(c->dir, "gen/c") && same(c->prefix, "db") && !c->templates
 				&& c->confirm_clear && c->types.count == 0, "the default C target changed");
-		expect(same(md->language, "markdown") && strstr(md->dir, "docs/schema") && !md->prefix,
+		expect(same(cpp->language, "cpp") && strstr(cpp->dir, "gen/cpp") && same(cpp->prefix, "db") && !cpp->templates
+				&& cpp->confirm_clear, "the default C++ target changed");
+		expect(same(md->language, "markdown") && strstr(md->dir, "gen/schema") && !md->prefix,
 				"the default markdown target changed");
-		expect(same(mm->language, "mermaid") && strstr(mm->dir, "docs/diagram") && !mm->prefix,
+		expect(same(mm->language, "mermaid") && strstr(mm->dir, "gen/diagram") && !mm->prefix,
 				"the default mermaid target changed");
 	}
 
@@ -177,8 +180,8 @@ static void target_directories(void) {
 			"targets of different languages without a directory do not load");
 
 	if (config.targets.count == 3) {
-		expect(strstr(config.targets.items[0].dir, "/gen") != NULL, "the C target's directory is not gen");
-		expect(strstr(config.targets.items[1].dir, "/docs/schema") != NULL, "the markdown directory is not docs/schema");
+		expect(strstr(config.targets.items[0].dir, "/gen/c") != NULL, "the C target's directory is not gen/c");
+		expect(strstr(config.targets.items[1].dir, "/gen/schema") != NULL, "the markdown directory is not gen/schema");
 		expect(strstr(config.targets.items[2].dir, "/docs/diagram") != NULL
 				&& strstr(config.targets.items[2].dir, "//") == NULL && strstr(config.targets.items[2].dir, "/./") == NULL,
 				"a target directory is not normalised");

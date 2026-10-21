@@ -219,22 +219,25 @@ int \(prefix)__read_id(sqlite3_stmt *stmt, int column, uint64_t *out) {
 	return \(prefix)__id(sqlite3_column_int64(stmt, column), out);
 }
 
-int \(prefix)__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len) {
-	return text ? sqlite3_bind_text64(stmt, index, text, (sqlite3_uint64)len, SQLITE_STATIC, SQLITE_UTF8)
+/* A cursor goes on stepping after the call that bound it returns, so it takes a copy (copy is
+ * nonzero); a statement that finishes within the call reads the caller's bytes. */
+int \(prefix)__bind_text(sqlite3_stmt *stmt, int index, const char *text, size_t len, int copy) {
+	return text ? sqlite3_bind_text64(stmt, index, text, (sqlite3_uint64)len, copy ? SQLITE_TRANSIENT : SQLITE_STATIC,
+			SQLITE_UTF8)
 			: sqlite3_bind_null(stmt, index);
 }
 
-int \(prefix)__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len) {
-	return bytes ? sqlite3_bind_blob64(stmt, index, bytes, (sqlite3_uint64)len, SQLITE_STATIC)
+int \(prefix)__bind_blob(sqlite3_stmt *stmt, int index, const void *bytes, size_t len, int copy) {
+	return bytes ? sqlite3_bind_blob64(stmt, index, bytes, (sqlite3_uint64)len, copy ? SQLITE_TRANSIENT : SQLITE_STATIC)
 			: sqlite3_bind_null(stmt, index);
 }
 
-int \(prefix)__bind_value(sqlite3_stmt *stmt, int index, const \(prefix)_value *value) {
+int \(prefix)__bind_value(sqlite3_stmt *stmt, int index, const \(prefix)_value *value, int copy) {
 	switch (value ? value->type : SQLITE_NULL) {
 	case SQLITE_INTEGER: return sqlite3_bind_int64(stmt, index, (sqlite3_int64)value->integer);
 	case SQLITE_FLOAT:   return sqlite3_bind_double(stmt, index, value->real);
-	case SQLITE_TEXT:    return \(prefix)__bind_text(stmt, index, value->text.ptr, value->text.len);
-	case SQLITE_BLOB:    return \(prefix)__bind_blob(stmt, index, value->blob.ptr ? (const void *)value->blob.ptr : "", value->blob.len);
+	case SQLITE_TEXT:    return \(prefix)__bind_text(stmt, index, value->text.ptr, value->text.len, copy);
+	case SQLITE_BLOB:    return \(prefix)__bind_blob(stmt, index, value->blob.ptr ? (const void *)value->blob.ptr : "", value->blob.len, copy);
 	default:             return sqlite3_bind_null(stmt, index);
 	}
 }
