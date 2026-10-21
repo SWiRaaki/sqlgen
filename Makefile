@@ -14,7 +14,7 @@ BUILD    ?= release
 CIPHER   ?= 0
 SUFFIX   :=
 
-SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/diff.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/lang_doc.c src/generate.c src/model_json.c src/main.c
+SRC      := src/util.c src/semver.c src/json.c src/jsonw.c src/config.c src/schema.c src/introspect.c src/diff.c src/rules.c src/bytecode.c src/query.c src/plan.c src/value.c src/template.c src/builtin.c src/lang_c.c src/lang_doc.c src/lang_odin.c src/generate.c src/model_json.c src/main.c
 HDR      := $(wildcard include/*.h)
 
 CSTD     := -std=c99
@@ -66,7 +66,7 @@ $(OUT)/%.o: src/%.c $(HDR) Makefile | $(OUT)
 	$(CC) $(CSTD) $(OPT) $(WARN) $(CPPFLAGS) -c $< -o $@
 
 # The built-in templates: each file under templates/<language>/ is compiled in as a byte array.
-LANGUAGES := c cpp markdown mermaid
+LANGUAGES := c cpp odin markdown mermaid
 BUILTIN_O := $(LANGUAGES:%=$(OUT)/builtin_%.o)
 
 $(OUT)/embed: tools/embed.c | $(OUT)
@@ -124,7 +124,22 @@ GEN_CXX  := $(CXX) $(OPT) -Wall -Wextra -pedantic -Wconversion -Wsign-conversion
             -Wcast-qual -Wzero-as-null-pointer-constant -Werror -I$(GEN_CPP) -Ivendor/sqlite3
 CPP_STDS := c++14 c++17 c++20 c++23
 
-test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(OUT)/config_test $(OUT)/mkdb \
+# The Odin that test/cases/generate-odin generates: the package checked as strictly as Odin checks,
+# driven by test/odin/plan_test against the vendored SQLite -- archived as libsqlite3.a, which the
+# generated `system:sqlite3` then finds -- and test/odin/wrong_types refused case by case. Skipped,
+# saying so, where no Odin compiler is installed.
+ODIN      ?= odin
+COMMA     := ,
+GEN_ODIN  := test/cases/generate-odin/gen
+ODIN_VET  := -vet -strict-style -warnings-as-errors
+ODIN_LINK := -extra-linker-flags:"-L$(OUT) $(LIBS)$(if $(findstring asan,$(BUILD)), -fsanitize=address$(COMMA)undefined)"
+ODIN_SAN  := $(if $(findstring asan,$(BUILD)),-sanitize:address -debug)
+
+$(OUT)/libsqlite3.a: $(SQLITE_O)
+	rm -f $@
+	ar rcs $@ $<
+
+test: $(OUT)/sqlgen $(OUT)/libsqlite3.a $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(OUT)/config_test $(OUT)/mkdb \
 		$(OUT)/bytecode_test
 	$(OUT)/semver_test
 	$(OUT)/json_test
@@ -145,6 +160,15 @@ test: $(OUT)/sqlgen $(OUT)/semver_test $(OUT)/json_test $(OUT)/template_test $(O
 	$(GEN_CXX) -std=c++11 -DWRONG=0 -fsyntax-only test/cpp/wrong_types.cpp
 	@for n in 1 2 3; do if $(GEN_CXX) -std=c++11 -DWRONG=$$n -fsyntax-only test/cpp/wrong_types.cpp 2>/dev/null; then \
 		echo "wrong_types: case $$n compiled"; exit 1; fi; done; echo "wrong_types: every case refused, as it must be"
+	@if command -v $(ODIN) >/dev/null 2>&1; then \
+		$(ODIN) check $(GEN_ODIN) -no-entry-point $(ODIN_VET) && \
+		$(ODIN) build test/odin/plan_test $(ODIN_VET) $(ODIN_SAN) $(ODIN_LINK) -out:$(OUT)/plan_test_odin && \
+		$(OUT)/plan_test_odin && \
+		$(ODIN) check test/odin/wrong_types $(ODIN_VET) -define:WRONG=0 && \
+		for n in 1 2 3; do if $(ODIN) check test/odin/wrong_types $(ODIN_VET) -define:WRONG=$$n >/dev/null 2>&1; then \
+			echo "wrong_types.odin: case $$n compiled"; exit 1; fi; done && \
+		echo "wrong_types.odin: every case refused, as it must be"; \
+	else echo "odin: not installed, so the Odin output was not compiled"; fi
 
 asan:
 	$(MAKE) BUILD=asan test

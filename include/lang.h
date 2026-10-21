@@ -82,6 +82,26 @@ size_t sg_lang_markdown_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_cont
  */
 size_t sg_lang_mermaid_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *context);
 
+/**
+ * @brief Odin's filters:
+ *   - `odinname`     snake case, `_` after a word Odin has taken (keywords, built-in types);
+ *   - `odinparam`    as `odinname`, also clear of the names generated procedures give their own
+ *                    parameters and locals (`ctx`, `allocator`, `stmt`, `rc`, …);
+ *   - `storage`      as for C;
+ *   - `odintype`     a column's Odin type: its typed id, `i64`, `f64`, `string`, `[]u8` or `Value`;
+ *   - `idtype`       a table's typed id type, `<Table>_<Key_Column>`;
+ *   - `odinstring`   a text as one Odin string literal, every byte that is not printable ASCII as `\xHH`;
+ *   - `odinstrings`  a text as literals, one per line, to join with `+` into one constant.
+ */
+size_t sg_lang_odin_filters(sg_filter out[SG_LANG_MAX_FILTERS], sg_lang_context *context);
+
+/**
+ * @brief Whether the plan can be spelled in Odin: one package holds every name, so a query's
+ *        procedures and types must not be a table's or the runtime's; the prefix, the package's
+ *        name, must not be a word Odin has taken.
+ */
+bool sg_lang_odin_check(const sg_config *config, const sg_target *target, size_t index, const sg_plan *plan);
+
 /** @brief An output language: its filters, and what it checks of a target before rendering. */
 typedef struct {
 	const char *name;

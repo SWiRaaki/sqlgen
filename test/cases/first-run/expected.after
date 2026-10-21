@@ -26,6 +26,14 @@
 			"confirm_clear": true
 		},
 		{
+			"language": "odin",
+			"dir": "gen/odin",
+			"prefix": "db",
+			"link": "system:sqlite3",
+			"templates": null,
+			"confirm_clear": true
+		},
+		{
 			"language": "markdown",
 			"dir": "gen/schema",
 			"templates": null,

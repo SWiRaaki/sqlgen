@@ -46,27 +46,31 @@ static void defaults_agree(void) {
 			&& same(written.patch_patterns.items[0], empty.patch_patterns.items[0]), "patches differ");
 	expect(written.double_quoted_strings == empty.double_quoted_strings, "double_quoted_strings differs");
 	expect(written.foreign_keys == empty.foreign_keys, "foreign_keys differs");
-	expect(written.targets.count == 4 && empty.targets.count == 4, "the default targets differ");
+	expect(written.targets.count == 5 && empty.targets.count == 5, "the default targets differ");
 
-	for (size_t i = 0; i < 4 && written.targets.count == 4 && empty.targets.count == 4; ++i) {
+	for (size_t i = 0; i < 5 && written.targets.count == 5 && empty.targets.count == 5; ++i) {
 		const sg_target *w = &written.targets.items[i];
 		const sg_target *e = &empty.targets.items[i];
 
 		expect(same(w->language, e->language) && same(w->dir, e->dir) && same(w->prefix, e->prefix)
 				&& same(w->templates, e->templates) && w->confirm_clear == e->confirm_clear
-				&& w->types.count == e->types.count, "a key of a default target differs");
+				&& w->types.count == e->types.count && same(w->link, e->link), "a key of a default target differs");
 	}
 
-	if (empty.targets.count == 4) {
-		const sg_target *c   = &empty.targets.items[0];
-		const sg_target *cpp = &empty.targets.items[1];
-		const sg_target *md  = &empty.targets.items[2];
-		const sg_target *mm  = &empty.targets.items[3];
+	if (empty.targets.count == 5) {
+		const sg_target *c    = &empty.targets.items[0];
+		const sg_target *cpp  = &empty.targets.items[1];
+		const sg_target *odin = &empty.targets.items[2];
+		const sg_target *md   = &empty.targets.items[3];
+		const sg_target *mm   = &empty.targets.items[4];
 
 		expect(same(c->language, "c") && strstr(c->dir, "gen/c") && same(c->prefix, "db") && !c->templates
 				&& c->confirm_clear && c->types.count == 0, "the default C target changed");
 		expect(same(cpp->language, "cpp") && strstr(cpp->dir, "gen/cpp") && same(cpp->prefix, "db") && !cpp->templates
 				&& cpp->confirm_clear, "the default C++ target changed");
+		expect(same(odin->language, "odin") && strstr(odin->dir, "gen/odin") && same(odin->prefix, "db")
+				&& same(odin->link, "system:sqlite3") && !odin->templates && odin->confirm_clear,
+				"the default Odin target changed");
 		expect(same(md->language, "markdown") && strstr(md->dir, "gen/schema") && !md->prefix,
 				"the default markdown target changed");
 		expect(same(mm->language, "mermaid") && strstr(mm->dir, "gen/diagram") && !mm->prefix,

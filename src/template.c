@@ -1714,14 +1714,14 @@ typedef struct {
 static void case_word(const char *word, void *user) {
 	casing *c = user;
 
-	if (c->count && (c->style == 0 || c->style == 1)) {
+	if (c->count && (c->style == 0 || c->style == 1 || c->style == 4)) {
 		sg_buf_putc(c->out, '_');
 	}
 
 	for (size_t i = 0; word[i]; ++i) {
 		char ch = word[i];
 
-		if (c->style == 1 || ((c->style == 2 || (c->style == 3 && c->count)) && i == 0)) {
+		if (c->style == 1 || ((c->style == 2 || c->style == 4 || (c->style == 3 && c->count)) && i == 0)) {
 			ch = ch >= 'a' && ch <= 'z' ? (char)(ch - 'a' + 'A') : ch;
 		}
 
@@ -1766,11 +1766,11 @@ static bool scalar_text(const sg_value *v, sg_buf *out) {
 
 static sg_value *builtin(const char *name, const sg_value *input, sg_value *const *args, size_t count,
 		char **error, bool *found) {
-	static const char *const cases[] = { "snake", "upper", "pascal", "camel" };
+	static const char *const cases[] = { "snake", "upper", "pascal", "camel", "ada" };
 
 	*found = true;
 
-	for (int i = 0; i < 4; ++i) {
+	for (int i = 0; i < 5; ++i) {
 		if (strcmp(name, cases[i]) == 0) {
 			return count ? filter_error(error, "%s takes no arguments", name) : recase(input, i, name, error);
 		}

@@ -83,12 +83,14 @@ typedef struct {
  * @brief One entry of `targets`: a language, where its files go, and how it spells the plan.
  *
  * Which keys a target takes depends on its language: every target has `language`, `dir`,
- * `templates`, `confirm_clear` and `types`; a C target also `prefix`.
+ * `templates` and `confirm_clear`; C also `prefix` and `types`; C++ `prefix`; Odin `prefix` and
+ * `link`; Markdown and Mermaid nothing more.
  */
 typedef struct {
-	char        *language;       //!< "c".
+	char        *language;       //!< "c", "cpp", "odin", "markdown" or "mermaid".
 	char        *dir;            //!< Where its files go; cleared on every generate.
-	char        *prefix;         //!< C: put before every generated name.
+	char        *prefix;         //!< C: put before every generated name; C++: the namespace; Odin: the package.
+	char        *link;           //!< Odin: what the generated code links SQLite with (`foreign import`).
 	char        *templates;      //!< A directory of templates replacing the built-in ones; NULL for those.
 	bool         confirm_clear;  //!< Ask before clearing a directory that is not empty.
 	sg_pair_vec  types;          //!< Logical type name -> the type this language spells it as.
@@ -109,7 +111,7 @@ typedef struct {
 
 	bool  embed_scripts;              //!< Generate the scripts into the output, for migrating at run time.
 	bool  typed_ids;                  //!< One distinct type per primary key, used by its foreign keys.
-	SG_VEC(sg_target) targets;        //!< Absent from the file: one C target with every default.
+	SG_VEC(sg_target) targets;        //!< Absent from the file: one target per language, with every default.
 
 	sg_pair_vec types_by_name;        //!< Column-name glob -> logical type name.
 	sg_pair_vec types_by_declared;    //!< Declared type -> logical type name; wins over by_name.

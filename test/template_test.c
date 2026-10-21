@@ -126,6 +126,8 @@ int main(void) {
 	sg_set_error_sink(collect, NULL);
 
 	/* Plain output, including everything a backslash means in C. */
+	renders("ada case", "\\(n | ada) \\(ws | ada)\n", "{ \"n\": \"tokenHash\", \"ws\": [\"user\", \"tag\"] }",
+			"Token_Hash User_Tag\n");
 	renders("pluck, flatten, contains",
 			"\\(ts | pluck(\"cs\") | flatten | join(\",\")) \\(ts | pluck(\"cs\") | flatten | contains(\"b\")) \\(ts | pluck(\"cs\") | flatten | contains(\"z\"))\n",
 			"{ \"ts\": [{ \"cs\": [\"a\", \"b\"] }, { \"cs\": [] }, { \"cs\": [\"c\"] }] }", "a,b,c true false\n");

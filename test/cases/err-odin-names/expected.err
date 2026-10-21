@@ -1,0 +1,5 @@
+sqlgen.json: error: $.targets[0].prefix: 'proc' is a word Odin has taken; a package needs another name
+q/finish.sql: error: the query q/finish.sql would define finish in the Odin package proc, which the runtime already defines
+q/migrate.sql: error: the query q/migrate.sql would define migrate.odin in the Odin package proc, which the runtime already defines
+q/users.sql: error: the query q/users.sql would define users.odin in the Odin package proc, which the table users already defines
+q/users_read.sql: error: the query q/users_read.sql would define users_read in the Odin package proc, which the table users already defines

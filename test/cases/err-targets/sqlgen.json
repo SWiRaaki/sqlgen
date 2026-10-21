@@ -4,7 +4,7 @@
 		{ "language": "c", "dir": "out/" },
 		{ "language": "c", "dir": "other", "namespace": "db" },
 		{ "dir": "x" },
-		{ "language": "odin" },
+		{ "language": "cobol" },
 		"c"
 	],
 	"types": { "by_name": { "*_at": "timestamp ms" } }

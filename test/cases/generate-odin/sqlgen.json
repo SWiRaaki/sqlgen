@@ -1,0 +1,12 @@
+{
+	"schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" },
+	"queries": ["../plan/queries/*.sql"],
+	"types": { "by_name": { "*_at": "timestamp_ms" }, "by_declared": {} },
+	"rules": { "query_scan": "off" },
+	"targets": [{ "language": "odin", "dir": "gen", "prefix": "db" }],
+	"tables": {
+		"*": { "writes": ["insert", "update", "delete", "upsert"] },
+		"user_tag": { "writes": ["link", "delete"] },
+		"sys_state": { "writes": false }
+	}
+}

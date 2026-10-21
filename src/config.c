@@ -75,6 +75,17 @@ static const field TARGET_CPP[] = {
 	{ NULL, 0 }
 };
 
+/* Odin names the library it links in its source, so the target says which. */
+static const field TARGET_ODIN[] = {
+	{ "language",      K_TEXT },
+	{ "dir",           K_TEXT },
+	{ "templates",     K_TEXT | K_NULL },
+	{ "confirm_clear", K_BOOL },
+	{ "prefix",        K_TEXT },
+	{ "link",          K_TEXT },
+	{ NULL, 0 }
+};
+
 /* Documentation: no names to spell, no types to map. */
 static const field TARGET_DOC[] = {
 	{ "language",      K_TEXT },
@@ -95,12 +106,13 @@ static const struct {
 } LANGUAGES[] = {
 	{ "c",        TARGET_C,   "gen/c",       true },
 	{ "cpp",      TARGET_CPP, "gen/cpp",     true },
+	{ "odin",     TARGET_ODIN, "gen/odin",   true },
 	{ "markdown", TARGET_DOC, "gen/schema",  true },
 	{ "mermaid",  TARGET_DOC, "gen/diagram", true },
 	{ NULL, NULL, NULL, false }
 };
 
-#define KNOWN_LANGUAGES "c, cpp, markdown, mermaid"
+#define KNOWN_LANGUAGES "c, cpp, odin, markdown, mermaid"
 
 static const field TYPES[] = {
 	{ "by_name",     K_OBJECT },
@@ -201,6 +213,7 @@ static const struct {
 #define DEFAULT_FOREIGN_KEYS          true
 #define DEFAULT_CONFIRM_CLEAR         true
 #define DEFAULT_PREFIX                "db"
+#define DEFAULT_LINK                  "system:sqlite3"
 #define DEFAULT_EMBED_SCRIPTS         true
 #define DEFAULT_TYPED_IDS             true
 
@@ -230,6 +243,14 @@ static const char DEFAULT_TEXT[] =
 	"\t\t\t\"language\": \"cpp\",\n"
 	"\t\t\t\"dir\": \"gen/cpp\",\n"
 	"\t\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
+	"\t\t\t\"templates\": null,\n"
+	"\t\t\t\"confirm_clear\": true\n"
+	"\t\t},\n"
+	"\t\t{\n"
+	"\t\t\t\"language\": \"odin\",\n"
+	"\t\t\t\"dir\": \"gen/odin\",\n"
+	"\t\t\t\"prefix\": \"" DEFAULT_PREFIX "\",\n"
+	"\t\t\t\"link\": \"" DEFAULT_LINK "\",\n"
 	"\t\t\t\"templates\": null,\n"
 	"\t\t\t\"confirm_clear\": true\n"
 	"\t\t},\n"
@@ -800,6 +821,7 @@ static void default_targets(sg_config *config) {
 		target->language      = sg_xstrdup(LANGUAGES[i].name);
 		target->dir           = target_dir(config, LANGUAGES[i].dir);
 		target->prefix        = LANGUAGES[i].keys == TARGET_DOC ? NULL : sg_xstrdup(DEFAULT_PREFIX);
+		target->link          = LANGUAGES[i].keys == TARGET_ODIN ? sg_xstrdup(DEFAULT_LINK) : NULL;
 		target->confirm_clear = DEFAULT_CONFIRM_CLEAR;
 	}
 }
@@ -866,7 +888,14 @@ static bool read_target(reader *r, const char *fullkey, sg_config *config) {
 	free(types);
 	free(key);
 
-	if (strcmp(language, "c") == 0 || strcmp(language, "cpp") == 0) {
+	if (strcmp(language, "odin") == 0) {
+		key = sg_format("%s.link", fullkey);
+		target->link = text_at(r, key);
+		target->link = target->link ? target->link : sg_xstrdup(DEFAULT_LINK);
+		free(key);
+	}
+
+	if (strcmp(language, "c") == 0 || strcmp(language, "cpp") == 0 || strcmp(language, "odin") == 0) {
 		key = sg_format("%s.prefix", fullkey);
 		target->prefix = text_at(r, key);
 
@@ -1098,6 +1127,7 @@ void sg_config_free(sg_config *config) {
 		free(target->language);
 		free(target->dir);
 		free(target->prefix);
+		free(target->link);
 		free(target->templates);
 
 		for (size_t p = 0; p < target->types.count; ++p) {

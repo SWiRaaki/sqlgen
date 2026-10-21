@@ -80,6 +80,7 @@ static sg_value *template_data(const sg_plan *plan, const sg_target *target, con
 	sg_map_set(t, "language", sg_value_text(target->language));
 	sg_map_set(t, "dir", sg_value_text(target->dir));
 	sg_map_set(t, "prefix", target->prefix ? sg_value_text(target->prefix) : sg_value_null());
+	sg_map_set(t, "link", target->link ? sg_value_text(target->link) : sg_value_null());
 
 	for (size_t i = 0; i < target->types.count; ++i) {
 		sg_map_set(types, target->types.items[i].key, sg_value_text(target->types.items[i].value));
@@ -363,7 +364,7 @@ bool sg_export_templates(const char *language, const char *dir) {
 	bool                  ok  = true;
 
 	if (!set) {
-		sg_error(NULL, 0, 0, "no built-in templates for the language '%s'; known: c, cpp, markdown, mermaid", language);
+		sg_error(NULL, 0, 0, "no built-in templates for the language '%s'; known: c, cpp, odin, markdown, mermaid", language);
 		return false;
 	}
 

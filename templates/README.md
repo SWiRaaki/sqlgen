@@ -7,13 +7,17 @@ has a directory of templates here, compiled into sqlgen:
 |---|---|
 | `c` | a C API over the schema: row types, typed ids, statements, queries, migration |
 | `cpp` | the same in C++, on its own (it does not wrap the C): C++11 and every later standard |
+| `odin` | the same as an Odin package, calling SQLite through bindings of its own |
 | `markdown` | `schema.md`: every table, view and query, and the patches |
 | `mermaid` | `schema.mmd`: an entity-relationship diagram of the tables and their foreign keys |
 
 A `markdown` or `mermaid` target takes only `language`, `dir`, `templates` and `confirm_clear`.
 A `cpp` target takes `language`, `dir`, `templates`, `confirm_clear` and `prefix` (its namespace);
-logical types from `types` are spelt by their storage, so it maps none. Without a `dir`, each
-language writes to its own, side by side: `gen/c`, `gen/cpp`, `gen/schema` and `gen/diagram`. A
+logical types from `types` are spelt by their storage, so it maps none. An `odin` target takes the
+same, `prefix` naming the package, and `link`: what its `foreign import` links SQLite with,
+`"system:sqlite3"` unless it says otherwise (a path such as `"vendor/libsqlite3.a"` works too). Without a `dir`, each
+language writes to its own, side by side: `gen/c`, `gen/cpp`, `gen/odin`, `gen/schema` and
+`gen/diagram`. A
 target clears its directory before writing, so no target may write inside another's.
 
 To change the output, export the built-in set, edit it, and point a target at your copy:
@@ -280,6 +284,7 @@ For every language:
 | `snake` | `token_hash` |
 | `pascal` | `TokenHash` |
 | `camel` | `tokenHash` |
+| `ada` | `Token_Hash` |
 | `upper` | `TOKEN_HASH` |
 | `lower` | the text in lowercase |
 | `join(sep)` | the items of a list, joined |
@@ -313,6 +318,17 @@ For C++, `storage`, `cstring`, `cstrings` and `cbytes` as for C, and:
 | `cppname` | as `cname`, avoiding C++'s keywords too |
 | `cpptype` | a column's C++ type: its id type, `int64_t`, `double`, `std::string`, `std::vector<unsigned char>` or `Value` |
 | `idtype` | a table's typed id type: `UsersSerial` |
+
+For Odin, `storage` as for C, and:
+
+| Filter | Result |
+|---|---|
+| `odinname` | snake case, avoiding Odin's keywords and built-in type names |
+| `odinparam` | as `odinname`, also avoiding the names generated procedures use themselves (`ctx`, `rc`, …) |
+| `odintype` | a column's Odin type: its id type, `i64`, `f64`, `string`, `[]u8` or `Value` |
+| `idtype` | a table's typed id type: `Users_Serial` |
+| `odinstring` | an Odin string literal, quotes included |
+| `odinstrings` | a list of literals, one per line of the text, to join with `+` |
 
 For Markdown:
 

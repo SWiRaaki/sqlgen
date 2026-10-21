@@ -1,0 +1,5 @@
+{
+	"schema": { "systables": "../plan/sys.sql", "patches": "../plan/sql/*/" },
+	"queries": ["q/*.sql"],
+	"targets": [{ "language": "odin", "dir": "gen", "prefix": "proc" }]
+}

@@ -21,6 +21,7 @@ typedef struct {
 
 extern const sg_builtin_set sg_builtin_c;
 extern const sg_builtin_set sg_builtin_cpp;
+extern const sg_builtin_set sg_builtin_odin;
 extern const sg_builtin_set sg_builtin_markdown;
 extern const sg_builtin_set sg_builtin_mermaid;
 
